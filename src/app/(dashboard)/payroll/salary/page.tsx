@@ -38,6 +38,9 @@ export default async function SalaryPage() {
         philhealthContribution: Number(p.philhealthContribution),
         pagibigContribution: Number(p.pagibigContribution),
         withholdingTax: Number(p.withholdingTax),
+        lateGraceMins: p.lateGraceMins,
+        lateRatePerHour: Number(p.lateRatePerHour),
+        dailyRate: Number(p.dailyRate),
         employee: { ...p.employee, branch: p.employee.branch?.name ?? "" },
       }))}
     />

@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 interface Payslip {
   id: string; cutoffLabel: string; payDate: string;
   basicPay: number; overtime: number; holidayPay: number; allowances: number; otherEarnings: number; grossPay: number;
+  daysWorked: number; daysAbsent: number; lateMins: number; lateDeduction: number;
   sss: number; philhealth: number; pagibig: number; tax: number; cashAdvance: number; absences: number;
   otherDeductions: number; totalDeductions: number; netPay: number; status: string;
   employee: { firstName: string; lastName: string; employeeNo: string; primaryPosition: string; branch: string };
@@ -67,6 +68,24 @@ export default function PayslipPrintView({ payslip: p, onBack }: { payslip: Pays
           </div>
         </div>
 
+        {/* Attendance Summary */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16, background: "#f8f9fa", borderRadius: 8, padding: "10px 16px", fontSize: 12 }}>
+          <div>
+            <span style={{ color: "#999" }}>Days Worked: </span>
+            <strong>{p.daysWorked}</strong>
+          </div>
+          <div>
+            <span style={{ color: "#999" }}>Days Absent: </span>
+            <strong style={{ color: p.daysAbsent > 0 ? "#c00" : "#222" }}>{p.daysAbsent}</strong>
+          </div>
+          <div>
+            <span style={{ color: "#999" }}>Late: </span>
+            <strong style={{ color: p.lateMins > 0 ? "#c00" : "#222" }}>
+              {p.lateMins > 0 ? `${Math.floor(p.lateMins / 60)}h ${p.lateMins % 60}m` : "None"}
+            </strong>
+          </div>
+        </div>
+
         {/* Two columns: Earnings + Deductions */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 20 }}>
           {/* Earnings */}
@@ -103,6 +122,7 @@ export default function PayslipPrintView({ payslip: p, onBack }: { payslip: Pays
                 {p.pagibig > 0 && <Row label="Pag-IBIG" amount={p.pagibig} red />}
                 {p.tax > 0 && <Row label="Withholding Tax" amount={p.tax} red />}
                 {p.cashAdvance > 0 && <Row label="Cash Advance / Loan" amount={p.cashAdvance} red />}
+                {p.lateDeduction > 0 && <Row label="Late Deduction" amount={p.lateDeduction} red />}
                 {p.absences > 0 && <Row label="Absences" amount={p.absences} red />}
                 {p.otherDeductions > 0 && <Row label="Other Deductions" amount={p.otherDeductions} red />}
               </tbody>

@@ -479,6 +479,9 @@ model SalaryProfile {
   philhealthContribution Decimal @db.Decimal(10, 2) @default(0)
   pagibigContribution Decimal @db.Decimal(10, 2) @default(0)
   withholdingTax  Decimal  @db.Decimal(10, 2) @default(0)
+  lateGraceMins   Int      @default(30)  // Grace period in minutes (no charge)
+  lateRatePerHour Decimal  @db.Decimal(10, 2) @default(0) // Deduction per hour of late
+  dailyRate       Decimal  @db.Decimal(10, 2) @default(0) // Deduction per day of absence (0 = auto from basic/22)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -507,6 +510,12 @@ model Payslip {
   allowances     Decimal  @db.Decimal(10, 2) @default(0) // rice + transpo + other
   otherEarnings  Decimal  @db.Decimal(10, 2) @default(0)
   grossPay       Decimal  @db.Decimal(12, 2)
+
+  // Attendance
+  daysWorked     Int      @default(0)
+  daysAbsent     Decimal  @db.Decimal(5, 1) @default(0) // supports half days
+  lateMins       Int      @default(0)  // total late minutes (after grace deducted)
+  lateDeduction  Decimal  @db.Decimal(10, 2) @default(0)
 
   // Deductions
   sss            Decimal  @db.Decimal(10, 2) @default(0)

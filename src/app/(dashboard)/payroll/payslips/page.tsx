@@ -27,6 +27,7 @@ export default async function PayslipsPage() {
         ...p,
         basicPay: Number(p.basicPay), overtime: Number(p.overtime), holidayPay: Number(p.holidayPay),
         allowances: Number(p.allowances), otherEarnings: Number(p.otherEarnings), grossPay: Number(p.grossPay),
+        daysWorked: p.daysWorked, daysAbsent: Number(p.daysAbsent), lateMins: p.lateMins, lateDeduction: Number(p.lateDeduction),
         sss: Number(p.sss), philhealth: Number(p.philhealth), pagibig: Number(p.pagibig), tax: Number(p.tax),
         cashAdvance: Number(p.cashAdvance), absences: Number(p.absences), otherDeductions: Number(p.otherDeductions),
         totalDeductions: Number(p.totalDeductions), netPay: Number(p.netPay),

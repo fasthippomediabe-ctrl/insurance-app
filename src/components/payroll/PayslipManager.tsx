@@ -9,6 +9,7 @@ import PayslipPrintView from "./PayslipPrintView";
 interface Payslip {
   id: string; employeeId: string; cutoffLabel: string; periodStart: string; periodEnd: string; payDate: string;
   basicPay: number; overtime: number; holidayPay: number; allowances: number; otherEarnings: number; grossPay: number;
+  daysWorked: number; daysAbsent: number; lateMins: number; lateDeduction: number;
   sss: number; philhealth: number; pagibig: number; tax: number; cashAdvance: number; absences: number;
   otherDeductions: number; totalDeductions: number; netPay: number; status: string; notes: string | null;
   employee: { id: string; firstName: string; lastName: string; employeeNo: string; primaryPosition: string; branch: string };

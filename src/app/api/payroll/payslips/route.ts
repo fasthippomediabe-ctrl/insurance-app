@@ -95,17 +95,36 @@ export async function POST(req: NextRequest) {
     const allowances = Number(profile.riceAllowance) + Number(profile.transpoAllowance) + Number(profile.otherAllowance);
     const halfAllowances = allowances / 2;
 
-    // Get overrides for this employee
+    // Get overrides for this employee (attendance + extras)
     const ov = overrides?.[profile.employeeId] ?? {};
     const overtime = ov.overtime ?? 0;
     const holidayPay = ov.holidayPay ?? 0;
     const otherEarnings = ov.otherEarnings ?? 0;
-    const absences = ov.absences ?? 0;
     const otherDeductions = ov.otherDeductions ?? 0;
+
+    // Attendance
+    const daysWorked = ov.daysWorked ?? (half === 1 ? 11 : 11); // default ~11 working days per half
+    const daysAbsent = ov.daysAbsent ?? 0;
+    const rawLateMins = ov.lateMins ?? 0; // total raw late minutes for the period
+
+    // Late deduction: first 30 mins (grace) per day is free, remaining charged per hour
+    const graceMins = Number(profile.lateGraceMins) || 30;
+    const lateRatePerHour = Number(profile.lateRatePerHour) || 0;
+    // Apply grace: subtract grace from total late (minimum 0)
+    const chargeableMins = Math.max(0, rawLateMins - graceMins);
+    const lateHours = chargeableMins / 60;
+    const lateDeduction = Math.round(lateHours * lateRatePerHour * 100) / 100;
+
+    // Absence deduction
+    const dailyRate = Number(profile.dailyRate) > 0
+      ? Number(profile.dailyRate)
+      : Number(profile.basicSalary) / 22; // 22 working days per month
+    const absenceDeduction = Math.round(daysAbsent * dailyRate * 100) / 100;
+    const absences = absenceDeduction;
 
     const grossPay = basicPay + halfAllowances + overtime + holidayPay + otherEarnings;
 
-    // Government deductions (split per cutoff — deduct on 1st half only is common, but we'll split evenly)
+    // Government deductions (deduct on 1st half only)
     const sss = half === 1 ? Number(profile.sssContribution) : 0;
     const philhealth = half === 1 ? Number(profile.philhealthContribution) : 0;
     const pagibig = half === 1 ? Number(profile.pagibigContribution) : 0;
@@ -117,7 +136,7 @@ export async function POST(req: NextRequest) {
     });
     const cashAdvance = loans.reduce((s, l) => s + Number(l.monthlyDeduction), 0);
 
-    const totalDeductions = sss + philhealth + pagibig + tax + cashAdvance + absences + otherDeductions;
+    const totalDeductions = sss + philhealth + pagibig + tax + cashAdvance + absences + lateDeduction + otherDeductions;
     const netPay = grossPay - totalDeductions;
 
     const cutoffLabel = half === 1
@@ -137,6 +156,10 @@ export async function POST(req: NextRequest) {
         allowances: halfAllowances,
         otherEarnings,
         grossPay,
+        daysWorked,
+        daysAbsent,
+        lateMins: chargeableMins,
+        lateDeduction,
         sss,
         philhealth,
         pagibig,

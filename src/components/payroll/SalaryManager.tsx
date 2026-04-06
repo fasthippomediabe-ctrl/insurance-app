@@ -13,7 +13,9 @@ interface Profile {
   id: string; employeeId: string; basicSalary: number; riceAllowance: number; transpoAllowance: number;
   otherAllowance: number; paySchedule: string; sssNo: string | null; philhealthNo: string | null;
   pagibigNo: string | null; tinNo: string | null; sssContribution: number; philhealthContribution: number;
-  pagibigContribution: number; withholdingTax: number; employee: Employee;
+  pagibigContribution: number; withholdingTax: number;
+  lateGraceMins: number; lateRatePerHour: number; dailyRate: number;
+  employee: Employee;
 }
 
 export default function SalaryManager({ employees, profiles }: { employees: Employee[]; profiles: Profile[] }) {
@@ -43,11 +45,15 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
       philhealthContribution: existing.philhealthContribution,
       pagibigContribution: existing.pagibigContribution,
       withholdingTax: existing.withholdingTax,
+      lateGraceMins: existing.lateGraceMins,
+      lateRatePerHour: existing.lateRatePerHour,
+      dailyRate: existing.dailyRate,
     } : {
       employeeId: empId,
       basicSalary: 0, riceAllowance: 0, transpoAllowance: 0, otherAllowance: 0,
       paySchedule: "REGULAR", sssNo: "", philhealthNo: "", pagibigNo: "", tinNo: "",
       sssContribution: 0, philhealthContribution: 0, pagibigContribution: 0, withholdingTax: 0,
+      lateGraceMins: 30, lateRatePerHour: 0, dailyRate: 0,
     });
     setEditing(empId);
     setMsg("");
@@ -187,6 +193,32 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
                     value={form.withholdingTax} onChange={(e) => setForm({ ...form, withholdingTax: parseFloat(e.target.value) || 0 })} />
                 </div>
               </div>
+
+              {/* Late & Absence Rules */}
+              <div className="border-t pt-4 mt-2">
+                <p className="text-xs font-semibold text-gray-700 mb-3">Late & Absence Rules</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Grace Period (mins)</label>
+                    <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      value={form.lateGraceMins} onChange={(e) => setForm({ ...form, lateGraceMins: parseInt(e.target.value) || 0 })} />
+                    <p className="text-[10px] text-gray-400 mt-0.5">No charge within this</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Late Rate / Hour</label>
+                    <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      value={form.lateRatePerHour} onChange={(e) => setForm({ ...form, lateRatePerHour: parseFloat(e.target.value) || 0 })} />
+                    <p className="text-[10px] text-gray-400 mt-0.5">After grace, per hour</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Daily Rate (absence)</label>
+                    <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: parseFloat(e.target.value) || 0 })} />
+                    <p className="text-[10px] text-gray-400 mt-0.5">0 = auto (basic/22)</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setEditing(null)}
                   className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
