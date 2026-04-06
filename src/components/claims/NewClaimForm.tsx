@@ -9,6 +9,8 @@ interface Member { id: string; mafNo: string; firstName: string; lastName: strin
 export default function NewClaimForm({ members }: { members: Member[] }) {
   const router = useRouter();
   const [memberId, setMemberId] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [deceasedType, setDeceasedType] = useState<"MEMBER" | "BENEFICIARY">("MEMBER");
   const [deceasedName, setDeceasedName] = useState("");
   const [dateOfDeath, setDateOfDeath] = useState("");
@@ -80,12 +82,46 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
       {/* Select Member */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Member Account</h2>
-        <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={memberId} onChange={(e) => handleMemberChange(e.target.value)} required>
-          <option value="">Select member...</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>{m.mafNo} — {m.firstName} {m.lastName} ({m.planCategory})</option>
-          ))}
-        </select>
+        <div className="relative">
+          <input
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            placeholder="Search by MAF no. or name..."
+            value={memberSearch}
+            onChange={(e) => { setMemberSearch(e.target.value); setShowDropdown(true); }}
+            onFocus={() => setShowDropdown(true)}
+          />
+          {showDropdown && memberSearch.length >= 1 && (
+            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {members
+                .filter((m) => {
+                  const q = memberSearch.toLowerCase();
+                  return m.mafNo.toLowerCase().includes(q) ||
+                    m.firstName.toLowerCase().includes(q) ||
+                    m.lastName.toLowerCase().includes(q) ||
+                    `${m.firstName} ${m.lastName}`.toLowerCase().includes(q);
+                })
+                .slice(0, 20)
+                .map((m) => (
+                  <button key={m.id} type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-50"
+                    onClick={() => {
+                      handleMemberChange(m.id);
+                      setMemberSearch(`${m.mafNo} — ${m.firstName} ${m.lastName}`);
+                      setShowDropdown(false);
+                    }}>
+                    <span className="font-mono text-gray-500">{m.mafNo}</span> — <span className="font-medium">{m.firstName} {m.lastName}</span>
+                    <span className="text-xs text-gray-400 ml-1">({m.planCategory})</span>
+                  </button>
+                ))}
+              {members.filter((m) => {
+                const q = memberSearch.toLowerCase();
+                return m.mafNo.toLowerCase().includes(q) || m.firstName.toLowerCase().includes(q) || m.lastName.toLowerCase().includes(q);
+              }).length === 0 && (
+                <p className="px-3 py-2 text-sm text-gray-400">No members found</p>
+              )}
+            </div>
+          )}
+        </div>
         {selectedMember && (
           <div className="mt-3 text-sm text-gray-600">
             Plan: <strong>{selectedMember.planCategory}</strong> · Beneficiaries: <strong>{selectedMember.beneficiaries.length}</strong>
