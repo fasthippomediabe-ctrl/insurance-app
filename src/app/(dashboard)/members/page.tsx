@@ -32,7 +32,7 @@ export default async function MembersPage({
     db.member.findMany({
       where,
       include: { branch: true, agent: true, collector: true },
-      orderBy: { mafNo: "asc" },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
