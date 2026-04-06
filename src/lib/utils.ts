@@ -25,6 +25,7 @@ export const MONTHLY_RATES: Record<MopCode, number> = {
   // Rosewood (P1250, discontinued)
   IIMR: 1250, IIQR: 1250, IISAR: 1250, IIAR: 1250,
   SPOT_CASH: 0,
+  SPOT_SERVICE: 30000,
 };
 
 // Payment frequency multiplier
@@ -54,6 +55,7 @@ export function getPaymentAmount(mopCode: MopCode): number {
 
 export function getTotalPlanAmount(mopCode: MopCode): number {
   if (mopCode === "SPOT_CASH") return 0;
+  if (mopCode === "SPOT_SERVICE") return 30000;
   const monthly = getMonthlyDue(mopCode);
   const multiplier = getMultiplier(mopCode);
   if (multiplier > 1) {
@@ -192,6 +194,7 @@ export const MOP_LABELS: Record<MopCode, string> = {
   IISAR:  "Individual Insurance Semi-Annual – Rosewood (₱1,250) ⚠ Discontinued",
   IIAR:   "Individual Insurance Annual – Rosewood (₱1,250) ⚠ Discontinued",
   SPOT_CASH: "Spot Cash (full payment, 10% discount)",
+  SPOT_SERVICE: "Spot Service (non-member, deceased, ₱30,000)",
 };
 
 export const PLAN_CATEGORY_LABELS: Record<PlanCategory, string> = {

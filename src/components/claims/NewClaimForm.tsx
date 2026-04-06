@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
 
 interface Beneficiary { id: string; firstName: string; lastName: string; relationship: string }
 interface Member {
@@ -95,7 +94,6 @@ function checkEligibility(
 
 export default function NewClaimForm({ members }: { members: Member[] }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"MEMBER_CLAIM" | "SPOT_SERVICE">("MEMBER_CLAIM");
   const [memberId, setMemberId] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -109,10 +107,6 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
   const [claimantContact, setClaimantContact] = useState("");
   const [claimantAddress, setClaimantAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [spotClientName, setSpotClientName] = useState("");
-  const [spotClientContact, setSpotClientContact] = useState("");
-  const [spotClientAddress, setSpotClientAddress] = useState("");
-  const [spotAmount, setSpotAmount] = useState(String(SPOT_SERVICE_DEFAULT));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -148,40 +142,28 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (mode === "SPOT_SERVICE") {
-      if (!spotClientName || !dateOfDeath) { setError("Please fill required fields."); return; }
-    } else {
-      if (!memberId || !deceasedName || !claimantName || !dateOfDeath) {
-        setError("Please fill in all required fields."); return;
-      }
-      if (eligibility && !eligibility.eligible) {
-        setError("This claim is NOT eligible. See eligibility check above."); return;
-      }
+    if (!memberId || !deceasedName || !claimantName || !dateOfDeath) {
+      setError("Please fill in all required fields."); return;
+    }
+    if (eligibility && !eligibility.eligible) {
+      setError("This claim is NOT eligible. See eligibility check above."); return;
     }
 
     setLoading(true); setError("");
     try {
       const body: any = {
-        deceasedType: mode === "SPOT_SERVICE" ? "SPOT_SERVICE" : deceasedType,
+        memberId,
+        deceasedType,
         deathType,
-        deceasedName: mode === "SPOT_SERVICE" ? spotClientName : deceasedName,
+        deceasedName,
         dateOfDeath,
         causeOfDeath,
-        claimantName: mode === "SPOT_SERVICE" ? spotClientName : claimantName,
-        claimantRelationship: mode === "SPOT_SERVICE" ? "Self" : claimantRelationship,
-        claimantContact: mode === "SPOT_SERVICE" ? spotClientContact : claimantContact,
-        claimantAddress: mode === "SPOT_SERVICE" ? spotClientAddress : claimantAddress,
+        claimantName,
+        claimantRelationship,
+        claimantContact,
+        claimantAddress,
         notes,
-        isSpotService: mode === "SPOT_SERVICE",
-        spotServiceAmount: mode === "SPOT_SERVICE" ? parseFloat(spotAmount) : undefined,
-        spotClientName: mode === "SPOT_SERVICE" ? spotClientName : undefined,
-        spotClientContact: mode === "SPOT_SERVICE" ? spotClientContact : undefined,
-        spotClientAddress: mode === "SPOT_SERVICE" ? spotClientAddress : undefined,
       };
-
-      if (mode === "MEMBER_CLAIM") {
-        body.memberId = memberId;
-      }
 
       const res = await fetch("/api/claims", {
         method: "POST",
@@ -202,65 +184,7 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
 
-      {/* Mode Toggle */}
-      <div className="flex gap-3">
-        <button type="button" onClick={() => setMode("MEMBER_CLAIM")}
-          className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-            mode === "MEMBER_CLAIM" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
-          }`}>
-          Member / Beneficiary Claim
-        </button>
-        <button type="button" onClick={() => setMode("SPOT_SERVICE")}
-          className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-            mode === "SPOT_SERVICE" ? "border-orange-500 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
-          }`}>
-          Spot Service (Non-Member)
-        </button>
-      </div>
-
-      {mode === "SPOT_SERVICE" ? (
-        /* ── SPOT SERVICE FORM ── */
-        <>
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-orange-900 mb-1">Spot Service</h2>
-            <p className="text-xs text-orange-600">Contract service for non-members. Default price: {formatCurrency(SPOT_SERVICE_DEFAULT)}</p>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Client Information</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Client / Deceased Name *</label>
-                <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={spotClientName}
-                  onChange={(e) => setSpotClientName(e.target.value)} required />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Contact Number</label>
-                <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={spotClientContact}
-                  onChange={(e) => setSpotClientContact(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Address</label>
-                <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={spotClientAddress}
-                  onChange={(e) => setSpotClientAddress(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Date of Death *</label>
-                <input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={dateOfDeath}
-                  onChange={(e) => setDateOfDeath(e.target.value)} required />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Service Amount</label>
-                <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={spotAmount}
-                  onChange={(e) => setSpotAmount(e.target.value)} />
-              </div>
-            </div>
-          </div>
-        </>
-      ) : (
-        /* ── MEMBER CLAIM FORM ── */
-        <>
-          {/* Select Member */}
+      {/* Select Member */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Member Account</h2>
             <div className="relative">
@@ -442,9 +366,6 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
                 <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={claimantAddress} onChange={(e) => setClaimantAddress(e.target.value)} /></div>
             </div>
           </div>
-        </>
-      )}
-
       {/* Notes */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
@@ -454,11 +375,9 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
 
       <div className="flex items-center justify-between">
         <button type="button" onClick={() => router.back()} className="text-sm text-gray-500 hover:text-gray-700">Cancel</button>
-        <button type="submit" disabled={loading || (mode === "MEMBER_CLAIM" && eligibility !== null && !eligibility.eligible)}
-          className={`px-6 py-2.5 text-white rounded-lg text-sm font-semibold disabled:opacity-50 ${
-            mode === "SPOT_SERVICE" ? "bg-orange-600 hover:bg-orange-700" : "bg-red-600 hover:bg-red-700"
-          }`}>
-          {loading ? "Filing..." : mode === "SPOT_SERVICE" ? "Create Spot Service Record" : "File Claim & Issue Stub"}
+        <button type="submit" disabled={loading || (eligibility !== null && !eligibility.eligible)}
+          className="px-6 py-2.5 text-white rounded-lg text-sm font-semibold disabled:opacity-50 bg-red-600 hover:bg-red-700">
+          {loading ? "Filing..." : "File Claim & Issue Stub"}
         </button>
       </div>
     </form>

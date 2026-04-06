@@ -77,10 +77,12 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
     setLoading(true);
     setError("");
 
+    const isSpotService = form.mopCode === "SPOT_SERVICE";
     const payload = {
       ...form,
       age: form.age ? parseInt(form.age) : undefined,
       spotCash: form.mopCode === "SPOT_CASH" || form.spotCash,
+      status: isSpotService ? "DECEASED_CLAIMANT" : undefined,
       beneficiaries: beneficiaries
         .filter((b) => b.firstName.trim())
         .map((b) => ({

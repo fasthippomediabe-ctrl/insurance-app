@@ -262,6 +262,8 @@ enum MopCode {
   IIAR
   // Spot Cash
   SPOT_CASH
+  // Spot Service (non-member, deceased, mortuary service)
+  SPOT_SERVICE
 }
 
 enum MemberStatus {
