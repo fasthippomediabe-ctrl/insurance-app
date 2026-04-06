@@ -200,6 +200,7 @@ model Member {
   payments        Payment[]
   commissions     Commission[]
   editRequests    MemberEditRequest[]
+  claims          Claim[]
 
   @@index([mafNo])
   @@index([status])
@@ -294,6 +295,85 @@ model Beneficiary {
   effectivityDate DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// CLAIMS
+// ─────────────────────────────────────────────
+model Claim {
+  id                String      @id @default(cuid())
+  claimNo           String      @unique
+  memberId          String
+  member            Member      @relation(fields: [memberId], references: [id])
+  branchId          String
+
+  // Deceased info
+  deceasedType      DeceasedType // MEMBER or BENEFICIARY
+  deceasedName      String       // Full name of deceased
+  dateOfDeath       DateTime
+  causeOfDeath      String?
+
+  // Claimant info (who receives the money)
+  claimantName      String       // Full name of claimant/beneficiary
+  claimantRelationship String    // Relationship to deceased
+  claimantContact   String?
+  claimantAddress   String?
+
+  // Plan & amount
+  planCategory      String       // plan at time of claim
+  approvedAmount    Decimal?     @db.Decimal(12, 2) // editable, set when approved
+  releasedAmount    Decimal?     @db.Decimal(12, 2) // actual amount released
+  dateReleased      DateTime?
+
+  // Workflow
+  status            ClaimStatus  @default(STUB_ISSUED)
+  filedDate         DateTime     @default(now())
+  submittedToHO     DateTime?    // date docs submitted to head office
+  verifiedDate      DateTime?
+  approvedDate      DateTime?
+  rejectedDate      DateTime?
+  rejectionReason   String?
+  processedBy       String?      // userId who processed
+  approvedBy        String?      // userId who approved
+
+  // Documents
+  documents         ClaimDocument[]
+
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([memberId])
+  @@index([branchId])
+  @@index([status])
+}
+
+enum DeceasedType {
+  MEMBER
+  BENEFICIARY
+}
+
+enum ClaimStatus {
+  STUB_ISSUED        // Branch gave claim stub + requirements list
+  REQUIREMENTS_SUBMITTED // Claimant submitted documents to branch
+  SUBMITTED_TO_HO    // Branch forwarded to head office
+  UNDER_REVIEW       // Head office verifying
+  APPROVED           // Approved, pending release
+  RELEASED           // Amount released to claimant
+  REJECTED           // Claim denied
+}
+
+model ClaimDocument {
+  id          String   @id @default(cuid())
+  claimId     String
+  claim       Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  docType     String   // "DEATH_CERTIFICATE", "MARRIAGE_CERTIFICATE", "BIRTH_CERTIFICATE", etc.
+  fileName    String
+  fileData    String   @db.Text // base64 encoded
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([claimId])
 }
 
 // ─────────────────────────────────────────────
