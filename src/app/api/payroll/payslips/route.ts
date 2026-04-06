@@ -195,3 +195,21 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ created: created.length, payslips: created });
 }
+
+// DELETE: Delete a payslip
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = session.user as any;
+  if (user.role !== "ADMIN" && user.role !== "HR") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  await db.payslip.delete({ where: { id } });
+
+  return NextResponse.json({ ok: true });
+}

@@ -44,6 +44,18 @@ export default function PayslipManager({ payslips }: { payslips: Payslip[] }) {
     }
   }
 
+  async function deletePayslip(id: string) {
+    if (!confirm("Delete this payslip?")) return;
+    try {
+      const res = await fetch(`/api/payroll/payslips?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Failed");
+      setMsg("Payslip deleted.");
+      router.refresh();
+    } catch (e: any) {
+      setMsg("Error: " + e.message);
+    }
+  }
+
   if (viewing) {
     return <PayslipPrintView payslip={viewing} onBack={() => setViewing(null)} />;
   }
@@ -119,8 +131,9 @@ export default function PayslipManager({ payslips }: { payslips: Payslip[] }) {
                       "bg-yellow-100 text-yellow-700"
                     }`}>{p.status}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <button onClick={() => setViewing(p)} className="text-purple-600 hover:underline text-xs font-medium">View Payslip</button>
+                  <td className="px-4 py-3 text-center space-x-2">
+                    <button onClick={() => setViewing(p)} className="text-purple-600 hover:underline text-xs font-medium">View</button>
+                    <button onClick={() => deletePayslip(p.id)} className="text-red-500 hover:underline text-xs font-medium">Delete</button>
                   </td>
                 </tr>
               ))}
