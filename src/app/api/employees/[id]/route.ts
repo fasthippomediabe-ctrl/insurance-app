@@ -27,18 +27,40 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (user.role !== "ADMIN" && user.role !== "HR") return NextResponse.json({ error: "Admin or HR only" }, { status: 403 });
 
   const body = await req.json();
-  const { isActive } = body;
-
-  if (typeof isActive !== "boolean") {
-    return NextResponse.json({ error: "isActive must be boolean" }, { status: 400 });
-  }
 
   const employee = await db.employee.findUnique({ where: { id: params.id } });
   if (!employee) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const {
+    isActive, employeeNo, firstName, middleName, lastName, nickname,
+    dateOfBirth, gender, civilStatus, contactNumber, address, email,
+    photo, dateHired, branchId,
+  } = body;
+
+  const updateData: any = {};
+
+  // Toggle active (existing functionality)
+  if (typeof isActive === "boolean") updateData.isActive = isActive;
+
+  // Basic fields
+  if (employeeNo !== undefined) updateData.employeeNo = employeeNo;
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (middleName !== undefined) updateData.middleName = middleName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (nickname !== undefined) updateData.nickname = nickname;
+  if (gender !== undefined) updateData.gender = gender || null;
+  if (civilStatus !== undefined) updateData.civilStatus = civilStatus || null;
+  if (contactNumber !== undefined) updateData.contactNumber = contactNumber || null;
+  if (address !== undefined) updateData.address = address || null;
+  if (email !== undefined) updateData.email = email || null;
+  if (photo !== undefined) updateData.photo = photo;
+  if (branchId !== undefined) updateData.branchId = branchId;
+  if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+  if (dateHired !== undefined) updateData.dateHired = dateHired ? new Date(dateHired) : undefined;
+
   const updated = await db.employee.update({
     where: { id: params.id },
-    data: { isActive },
+    data: updateData,
   });
 
   return NextResponse.json(updated);

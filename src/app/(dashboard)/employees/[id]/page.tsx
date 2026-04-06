@@ -89,6 +89,10 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
           </div>
         </div>
         <div className="flex gap-2">
+          <Link href={`/employees/${employee.id}/edit`}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+            Edit Details
+          </Link>
           <ToggleActiveButton
             employeeId={employee.id}
             employeeName={`${employee.firstName} ${employee.lastName}`}
