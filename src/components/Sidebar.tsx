@@ -140,13 +140,22 @@ const navItems = [
   },
 ];
 
-export default function Sidebar({ role, pendingEditRequests = 0 }: { role: string; pendingEditRequests?: number }) {
+export default function Sidebar({ role, pendingEditRequests = 0, open, onClose }: { role: string; pendingEditRequests?: number; open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
 
   const visible = navItems.filter((item) => item.roles.includes(role));
 
   return (
-    <div className="w-64 flex flex-col shadow-lg" style={{ background: "linear-gradient(180deg, #1535b0 0%, #0e2580 100%)" }}>
+    <>
+      {/* Mobile overlay */}
+      {open && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
+      )}
+    <div className={`
+      fixed lg:static inset-y-0 left-0 z-50 w-64 flex flex-col shadow-lg
+      transform transition-transform duration-200 ease-in-out
+      ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
+    `} style={{ background: "linear-gradient(180deg, #1535b0 0%, #0e2580 100%)" }}>
       {/* Brand */}
       <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
         <div className="flex items-center gap-3">
@@ -173,6 +182,7 @@ export default function Sidebar({ role, pendingEditRequests = 0 }: { role: strin
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                 active
@@ -209,5 +219,6 @@ export default function Sidebar({ role, pendingEditRequests = 0 }: { role: strin
         </span>
       </div>
     </div>
+    </>
   );
 }

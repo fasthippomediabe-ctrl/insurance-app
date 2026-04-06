@@ -1,8 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import Sidebar from "@/components/Sidebar";
-import TopBar from "@/components/TopBar";
+import DashboardShell from "@/components/DashboardShell";
 
 export default async function DashboardLayout({
   children,
@@ -19,12 +18,12 @@ export default async function DashboardLayout({
     : 0;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar role={user.role} pendingEditRequests={pendingEditRequests} />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <TopBar session={session} />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
-      </div>
-    </div>
+    <DashboardShell
+      session={session}
+      role={user.role}
+      pendingEditRequests={pendingEditRequests}
+    >
+      {children}
+    </DashboardShell>
   );
 }
