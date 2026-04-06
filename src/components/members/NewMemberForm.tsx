@@ -28,6 +28,8 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mafError, setMafError] = useState("");
+  const [checkingMaf, setCheckingMaf] = useState(false);
 
   const [form, setForm] = useState({
     mafNo: "",
@@ -64,6 +66,24 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  async function checkMafDuplicate(maf: string) {
+    if (!maf.trim()) { setMafError(""); return; }
+    setCheckingMaf(true);
+    try {
+      const res = await fetch(`/api/members/lookup?mafNo=${encodeURIComponent(maf.trim())}`);
+      const data = await res.json();
+      if (data.exists) {
+        setMafError(`MAF ${maf} already exists — ${data.name} (${data.branch})`);
+      } else {
+        setMafError("");
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCheckingMaf(false);
+    }
+  }
+
   function setBenef(index: number, field: string, value: string) {
     setBeneficiaries((prev) => prev.map((b, i) => i === index ? { ...b, [field]: value } : b));
   }
@@ -82,6 +102,7 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (mafError) { setError("Please fix the duplicate MAF number first."); return; }
     setLoading(true);
     setError("");
 
@@ -130,7 +151,12 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="label">MAF No. *</label>
-            <input className="input" required value={form.mafNo} onChange={(e) => set("mafNo", e.target.value)} placeholder="e.g. KID-2021-001" />
+            <input className={`input ${mafError ? "border-red-500 bg-red-50" : ""}`} required value={form.mafNo}
+              onChange={(e) => { set("mafNo", e.target.value); setMafError(""); }}
+              onBlur={(e) => checkMafDuplicate(e.target.value)}
+              placeholder="e.g. KID-2021-001" />
+            {checkingMaf && <p className="text-xs text-gray-400 mt-0.5">Checking...</p>}
+            {mafError && <p className="text-xs text-red-600 mt-0.5">{mafError}</p>}
           </div>
           <div>
             <label className="label">Enrollment Date *</label>

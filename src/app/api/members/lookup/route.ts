@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
       effectivityDate: true,
       status: true,
       agent: { select: { isActive: true } },
+      branch: { select: { name: true } },
       payments: {
         select: { installmentNo: true, isFree: true },
         orderBy: { installmentNo: "desc" },
@@ -34,13 +35,16 @@ export async function GET(req: NextRequest) {
   });
 
   if (!member) {
-    return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    return NextResponse.json({ exists: false });
   }
 
   const lastInstallmentNo = member.payments[0]?.installmentNo ?? 0;
   const paidPaymentCount = member.payments.filter((p) => !p.isFree).length;
 
   return NextResponse.json({
+    exists: true,
+    name: `${member.firstName} ${member.lastName}`,
+    branch: member.branch?.name ?? "",
     id: member.id,
     mafNo: member.mafNo,
     firstName: member.firstName,
