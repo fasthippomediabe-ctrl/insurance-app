@@ -39,12 +39,20 @@ function groupPayments(
     if (batch.length === 1) {
       periodLabel = `${MONTHS_SHORT[first.periodMonth - 1]} ${first.periodYear}`;
     } else {
-      const fromLabel = `${MONTHS_SHORT[first.periodMonth - 1]}`;
-      const toLabel = `${MONTHS_SHORT[last.periodMonth - 1]}`;
-      if (first.periodYear === last.periodYear) {
-        periodLabel = `${fromLabel}-${toLabel} ${first.periodYear}`;
+      // For grouped payments, show the starting month and spread across consecutive months
+      const startMonth = first.periodMonth;
+      const startYear = first.periodYear;
+      // Calculate end month by adding batch.length - 1
+      let endMonth = startMonth + batch.length - 1;
+      let endYear = startYear;
+      while (endMonth > 12) { endMonth -= 12; endYear++; }
+
+      const fromLabel = MONTHS_SHORT[startMonth - 1];
+      const toLabel = MONTHS_SHORT[endMonth - 1];
+      if (startYear === endYear) {
+        periodLabel = `${fromLabel}-${toLabel} ${startYear}`;
       } else {
-        periodLabel = `${fromLabel} ${first.periodYear}-${toLabel} ${last.periodYear}`;
+        periodLabel = `${fromLabel} ${startYear}-${toLabel} ${endYear}`;
       }
     }
 
