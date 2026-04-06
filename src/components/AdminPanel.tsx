@@ -216,8 +216,8 @@ export default function AdminPanel({ branches, users, agents, collectors }: {
         <h2 className="font-semibold text-gray-800 mb-3">Data Fix Tools</h2>
         <div className="flex flex-wrap gap-3">
           <FixButton
-            label="Fix Quarterly/SA/Annual Amounts"
-            description="Apply 10% discount to quarterly, semi-annual, and annual payments that were imported at full monthly rate"
+            label="Revert Quarterly Amount Fix"
+            description="Revert payments that were wrongly changed from monthly rate to discounted rate. Restores original amounts."
             endpoint="/api/admin/fix-quarterly"
           />
         </div>

@@ -19,7 +19,7 @@ function getMultiplier(mopCode: string): number {
   return 1;
 }
 
-// POST: Fix quarterly/semi-annual/annual payment amounts to include 10% discount
+// POST: Revert — restore payments that were wrongly changed from monthly rate to discounted rate
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,14 +42,14 @@ export async function POST(req: NextRequest) {
     if (multiplier <= 1) continue;
 
     const monthlyBase = Number(m.monthlyDue);
-    const correctPerInstallment = Math.round(monthlyBase * 0.9 * 100) / 100;
+    const wrongDiscountedRate = Math.round(monthlyBase * 0.9 * 100) / 100;
 
-    // Find payments at the full (undiscounted) monthly rate
+    // Find payments that were wrongly changed to the discounted rate
     const payments = await db.payment.findMany({
       where: {
         memberId: m.id,
         isFree: false,
-        amount: monthlyBase,
+        amount: wrongDiscountedRate,
       },
       select: { id: true },
     });
@@ -58,22 +58,20 @@ export async function POST(req: NextRequest) {
 
     totalMembers++;
 
-    // Bulk update
+    // Restore to original monthly rate
     await db.payment.updateMany({
-      where: {
-        id: { in: payments.map((p) => p.id) },
-      },
-      data: { amount: correctPerInstallment },
+      where: { id: { in: payments.map((p) => p.id) } },
+      data: { amount: monthlyBase },
     });
 
     totalFixed += payments.length;
-    details.push(`MAF ${m.mafNo} (${m.firstName} ${m.lastName}) — ${m.mopCode} — ${payments.length} payments: ₱${monthlyBase} → ₱${correctPerInstallment}`);
+    details.push(`MAF ${m.mafNo} (${m.firstName} ${m.lastName}) — ${payments.length} payments: ₱${wrongDiscountedRate} → ₱${monthlyBase} (reverted)`);
   }
 
   return NextResponse.json({
     totalMembers,
     totalFixed,
     details,
-    message: `Fixed ${totalFixed} payments across ${totalMembers} members.`,
+    message: `Reverted ${totalFixed} payments across ${totalMembers} members back to original amounts.`,
   });
 }
