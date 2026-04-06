@@ -17,7 +17,8 @@ function formatCurrency(n: number) {
 }
 
 interface PaymentRecord {
-  month: number; year: number; installment: number; amount: number; date: string; isFree: boolean;
+  installmentFrom: number; installmentTo: number; periodLabel: string;
+  totalAmount: number; date: string; isFree: boolean; months: number;
 }
 
 interface MemberData {
@@ -227,13 +228,20 @@ export default function VerifyPage() {
                   <tbody className="divide-y divide-gray-50">
                     {data.payments.map((p, i) => (
                       <tr key={i} className={p.isFree ? "bg-blue-50/50" : ""}>
-                        <td className="px-4 py-2.5 text-center text-gray-400 text-xs">{p.installment}</td>
+                        <td className="px-4 py-2.5 text-center text-gray-400 text-xs">
+                          {p.installmentFrom === p.installmentTo
+                            ? p.installmentFrom
+                            : `${p.installmentFrom}-${p.installmentTo}`}
+                        </td>
                         <td className="px-4 py-2.5 font-medium">
-                          {MONTHS[p.month - 1]} {p.year}
+                          {p.periodLabel}
                           {p.isFree && <span className="ml-1.5 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">FREE</span>}
+                          {p.months > 1 && !p.isFree && (
+                            <span className="ml-1.5 text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-bold">{p.months} mos</span>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-right font-semibold">
-                          {formatCurrency(p.amount)}
+                          {formatCurrency(p.totalAmount)}
                           {p.isFree && <span className="text-[10px] text-blue-500 ml-1">(FREE)</span>}
                         </td>
                         <td className="px-4 py-2.5 text-gray-500 text-xs">

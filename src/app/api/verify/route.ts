@@ -1,6 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Group consecutive payments paid on the same date into one row
+function groupPayments(
+  payments: { periodMonth: number; periodYear: number; installmentNo: number; amount: any; paymentDate: Date; isFree: boolean }[],
+  monthlyDue: number,
+) {
+  // Sort ascending for grouping
+  const sorted = [...payments].sort((a, b) =>
+    a.periodYear !== b.periodYear ? a.periodYear - b.periodYear : a.periodMonth - b.periodMonth
+  );
+
+  const groups: {
+    installmentFrom: number; installmentTo: number;
+    periodLabel: string; totalAmount: number; date: string; isFree: boolean; months: number;
+  }[] = [];
+
+  let i = 0;
+  while (i < sorted.length) {
+    const p = sorted[i];
+    const payDateStr = p.paymentDate.toISOString().split("T")[0];
+
+    // Collect consecutive payments with the same paymentDate
+    let j = i + 1;
+    while (j < sorted.length && sorted[j].paymentDate.toISOString().split("T")[0] === payDateStr && !p.isFree) {
+      j++;
+    }
+    if (p.isFree) j = i + 1; // free months stay individual
+
+    const batch = sorted.slice(i, j);
+    const first = batch[0];
+    const last = batch[batch.length - 1];
+    const totalAmount = batch.reduce((s, x) => s + (x.isFree ? monthlyDue : Number(x.amount)), 0);
+
+    let periodLabel: string;
+    if (batch.length === 1) {
+      periodLabel = `${MONTHS_SHORT[first.periodMonth - 1]} ${first.periodYear}`;
+    } else {
+      const fromLabel = `${MONTHS_SHORT[first.periodMonth - 1]}`;
+      const toLabel = `${MONTHS_SHORT[last.periodMonth - 1]}`;
+      if (first.periodYear === last.periodYear) {
+        periodLabel = `${fromLabel}-${toLabel} ${first.periodYear}`;
+      } else {
+        periodLabel = `${fromLabel} ${first.periodYear}-${toLabel} ${last.periodYear}`;
+      }
+    }
+
+    groups.push({
+      installmentFrom: first.installmentNo,
+      installmentTo: last.installmentNo,
+      periodLabel,
+      totalAmount,
+      date: p.paymentDate.toISOString(),
+      isFree: p.isFree,
+      months: batch.length,
+    });
+
+    i = j;
+  }
+
+  // Return in descending order (newest first)
+  return groups.reverse();
+}
+
 // Simple in-memory rate limiter
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
@@ -117,13 +181,6 @@ export async function POST(req: NextRequest) {
     dueDate: dueDate.toISOString(),
     aging,
     amountDue,
-    payments: member.payments.map((p) => ({
-      month: p.periodMonth,
-      year: p.periodYear,
-      installment: p.installmentNo,
-      amount: p.isFree ? monthlyDue : Number(p.amount),
-      date: p.paymentDate.toISOString(),
-      isFree: p.isFree,
-    })),
+    payments: groupPayments(member.payments, monthlyDue),
   });
 }
