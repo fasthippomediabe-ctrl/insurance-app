@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       mopCode: true,
       status: true,
       enrollmentDate: true,
+      effectivityDate: true,
       monthlyDue: true,
       totalPlanAmount: true,
       branch: { select: { name: true } },
@@ -70,6 +71,36 @@ export async function POST(req: NextRequest) {
   const balance = Number(member.totalPlanAmount) - totalPaid;
   const lastPayment = member.payments.length > 0 ? member.payments[0] : null;
 
+  // Compute due date: last paid period + 1 month interval
+  const mopCode = member.mopCode;
+  const interval = mopCode.includes("SA") ? 6 : mopCode[2] === "Q" ? 3 : mopCode[2] === "A" ? 12 : 1;
+  const effDate = member.effectivityDate ?? member.enrollmentDate;
+  const paidPayments = member.payments.filter((p) => !p.isFree);
+  let dueDate: Date;
+
+  if (paidPayments.length > 0) {
+    const latest = paidPayments.reduce((best, p) =>
+      (p.periodYear > best.periodYear || (p.periodYear === best.periodYear && p.periodMonth > best.periodMonth)) ? p : best
+    );
+    dueDate = new Date(latest.periodYear, latest.periodMonth - 1 + interval, 1);
+  } else {
+    const hasFree = member.payments.some((p) => p.isFree);
+    dueDate = new Date(effDate);
+    dueDate.setMonth(dueDate.getMonth() + (hasFree ? 2 : 1) * interval);
+  }
+
+  // Compute aging
+  const now = new Date();
+  const monthsOverdue = (now.getFullYear() - dueDate.getFullYear()) * 12 + (now.getMonth() - dueDate.getMonth());
+  let aging = 0;
+  if (monthsOverdue >= 1) aging = 30;
+  if (monthsOverdue >= 2) aging = 60;
+  if (monthsOverdue >= 3) aging = 90;
+  if (monthsOverdue >= 4) aging = 120; // lapsed
+
+  // Amount due (overdue amount)
+  const amountDue = aging > 0 ? Math.min(monthsOverdue, 3) * monthlyDue : monthlyDue; // current or overdue
+
   return NextResponse.json({
     mafNo: member.mafNo,
     name: `${member.firstName} ${member.lastName}`,
@@ -81,8 +112,11 @@ export async function POST(req: NextRequest) {
     totalPlanAmount: Number(member.totalPlanAmount),
     totalPaid,
     balance: Math.max(0, balance),
-    installmentsDone: member.payments.filter((p) => !p.isFree).length,
+    installmentsDone: member.payments.length,
     lastPaymentDate: lastPayment?.paymentDate?.toISOString() ?? null,
+    dueDate: dueDate.toISOString(),
+    aging,
+    amountDue,
     payments: member.payments.map((p) => ({
       month: p.periodMonth,
       year: p.periodYear,

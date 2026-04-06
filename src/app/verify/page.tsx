@@ -24,7 +24,8 @@ interface MemberData {
   mafNo: string; name: string; plan: string; branch: string; status: string;
   enrollmentDate: string; monthlyDue: number; totalPlanAmount: number;
   totalPaid: number; balance: number; installmentsDone: number;
-  lastPaymentDate: string | null; payments: PaymentRecord[];
+  lastPaymentDate: string | null; dueDate: string; aging: number; amountDue: number;
+  payments: PaymentRecord[];
 }
 
 export default function VerifyPage() {
@@ -165,6 +166,39 @@ export default function VerifyPage() {
                     <p className="font-bold text-red-600">{formatCurrency(data.balance)}</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Due Date & Aging */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-xs text-gray-400">Next Due</p>
+                    <p className="font-bold text-sm">
+                      {new Date(data.dueDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Aging</p>
+                    <p className={`font-bold text-sm ${
+                      data.aging >= 120 ? "text-red-700" : data.aging >= 60 ? "text-orange-600" : data.aging >= 30 ? "text-yellow-600" : "text-green-600"
+                    }`}>
+                      {data.aging === 0 ? "Current" : data.aging >= 120 ? "LAPSED" : `${data.aging} days`}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Amount Due</p>
+                    <p className={`font-bold text-sm ${data.aging > 0 ? "text-red-600" : "text-gray-800"}`}>
+                      {formatCurrency(data.amountDue)}
+                    </p>
+                  </div>
+                </div>
+                {data.aging >= 90 && (
+                  <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 text-center">
+                    {data.aging >= 120
+                      ? "Your account is LAPSED. Please visit your branch to reinstate."
+                      : "Your account is overdue. Please pay as soon as possible to avoid lapsing."}
+                  </div>
+                )}
               </div>
 
               {data.lastPaymentDate && (
