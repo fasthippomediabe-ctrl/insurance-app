@@ -1,0 +1,452 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────
+// BRANCHES
+// ─────────────────────────────────────────────
+model Branch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  members     Member[]
+  employees   Employee[]
+  remittances Remittance[]
+  cutoffs     OperationCutoff[]
+}
+
+// ─────────────────────────────────────────────
+// USERS (System Login Accounts)
+// ─────────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      UserRole @default(BRANCH_STAFF)
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  BRANCH_STAFF
+}
+
+// ─────────────────────────────────────────────
+// EMPLOYEES
+// ─────────────────────────────────────────────
+model Employee {
+  id            String    @id @default(cuid())
+  employeeNo    String    @unique
+  // Primary/display position (highest rank)
+  primaryPosition EmployeePosition
+  firstName     String
+  middleName    String?
+  lastName      String
+  nickname      String?
+  dateOfBirth   DateTime?
+  gender        Gender?
+  civilStatus   String?
+  contactNumber String?
+  address       String?
+  email         String?
+  dateHired     DateTime  @default(now())
+  isActive      Boolean   @default(true)
+  branchId      String
+  branch        Branch    @relation(fields: [branchId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Collector balance: negative = deficit (owes), positive = surplus
+  // Surplus resets to 0 at month-end; deficit carries forward
+  collectorBalance Decimal @db.Decimal(10, 2) @default(0)
+
+  // Sponsor = who recruited this person (upline for commission cascade)
+  sponsorId     String?
+  sponsor       Employee? @relation("EmployeeSponsor", fields: [sponsorId], references: [id])
+  recruits      Employee[] @relation("EmployeeSponsor")
+
+  // Multiple positions per employee (MO can also be MH and AM simultaneously)
+  positions     EmployeePositionRecord[]
+
+  // Links to member transactions
+  agentMembers     Member[]     @relation("MemberAgent")
+  collectorMembers Member[]     @relation("MemberCollector")
+  payments         Payment[]
+  commissions      Commission[]
+  remittances      Remittance[]
+
+  @@index([primaryPosition])
+  @@index([branchId])
+  @@index([sponsorId])
+}
+
+// Tracks each position a person holds (can have MO + MH + AM simultaneously)
+model EmployeePositionRecord {
+  id           String           @id @default(cuid())
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id])
+  position     EmployeePosition
+  dateGranted  DateTime         @default(now())
+  isActive     Boolean          @default(true)
+  notes        String?
+  createdAt    DateTime         @default(now())
+
+  @@unique([employeeId, position])
+  @@index([employeeId])
+}
+
+// Promotion history log
+model PromotionHistory {
+  id           String           @id @default(cuid())
+  employeeId   String
+  fromPosition EmployeePosition?
+  toPosition   EmployeePosition
+  promotedDate DateTime         @default(now())
+  notes        String?
+  createdAt    DateTime         @default(now())
+
+  @@index([employeeId])
+}
+
+enum EmployeePosition {
+  MO   // Marketing Officer / Sales Agent
+  AO   // Account Officer / Collector
+  MH   // Marketing Head
+  AM   // Area Manager
+  CS   // Collection Supervisor
+  BS   // Branch Staff
+  BM   // Branch Manager
+  RM   // Regional Manager
+  TH   // Territory Head
+  EVP  // Executive Vice President
+  CEO  // Chief Executive Officer
+  CHR  // Chairman
+}
+
+// ─────────────────────────────────────────────
+// MEMBERS
+// ─────────────────────────────────────────────
+model Member {
+  id              String        @id @default(cuid())
+  mafNo           String        @unique
+  enrollmentDate  DateTime
+  insuranceType   InsuranceType
+  planCategory    PlanCategory
+  mopCode         MopCode
+  firstName       String
+  middleName      String?
+  lastName        String
+  address         String
+  dateOfBirth     DateTime?
+  age             Int?
+  religion        String?
+  contactNumber   String?
+  occupation      String?
+  civilStatus     String?
+  gender          Gender?
+
+  // Pricing
+  monthlyDue      Decimal       @db.Decimal(10, 2)
+  totalPlanAmount Decimal       @db.Decimal(10, 2)
+  spotCash        Boolean       @default(false)
+  spotCashAmount  Decimal?      @db.Decimal(10, 2)
+
+  // Status
+  status          MemberStatus  @default(ACTIVE)
+  lapseDate       DateTime?
+  reinstatedDate  DateTime?
+  reinstateType   ReinstateType?
+  effectivityDate DateTime?
+  fullyPaidDate   DateTime?
+  deceasedDate    DateTime?
+
+  // Operation tag (month/year when enrolled e.g. "January 2026")
+  operationMonth  Int?
+  operationYear   Int?
+
+  // Relationships
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  agentId         String?
+  agent           Employee?     @relation("MemberAgent", fields: [agentId], references: [id])
+  collectorId     String?
+  collector       Employee?     @relation("MemberCollector", fields: [collectorId], references: [id])
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  beneficiaries   Beneficiary[]
+  payments        Payment[]
+  commissions     Commission[]
+  editRequests    MemberEditRequest[]
+
+  @@index([mafNo])
+  @@index([status])
+  @@index([branchId])
+  @@index([collectorId])
+  @@index([agentId])
+  @@index([operationYear, operationMonth])
+}
+
+enum InsuranceType {
+  FAMILY_INSURANCE
+  NON_INSURABLE
+  INDIVIDUAL_INSURANCE
+}
+
+enum PlanCategory {
+  EUCALYPTUS
+  CHERRY
+  CONIFER
+  ROSEWOOD
+}
+
+// MOP Codes — Insurance Type + Mode + Plan (suffix 2 = 2025 new price)
+enum MopCode {
+  // Family Insurance + Eucalyptus (old P420)
+  FIME
+  FIQE
+  FISAE
+  FIAE
+  // Family Insurance + Eucalyptus (new P450 from 2025)
+  FIME2
+  FIQE2
+  FISAE2
+  FIAE2
+  // Non Insurable + Cherry (old P340)
+  NIMC
+  NIQC
+  NISAC
+  NIAC
+  // Non Insurable + Cherry (new P380 from 2025)
+  NIMC2
+  NIQC2
+  NISAC2
+  NIAC2
+  // Family Insurance + Conifer (P650, discontinued)
+  FIMC
+  FIQC
+  FISAC
+  FIAC
+  // Individual Insurance + Rosewood (P1250, discontinued)
+  IIMR
+  IIQR
+  IISAR
+  IIAR
+  // Spot Cash
+  SPOT_CASH
+}
+
+enum MemberStatus {
+  ACTIVE
+  LAPSED
+  REINSTATED
+  FULLY_PAID
+  DECEASED_CLAIMANT
+  CANCELLED
+}
+
+enum ReinstateType {
+  REDATE
+  UPDATE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+// ─────────────────────────────────────────────
+// BENEFICIARIES
+// ─────────────────────────────────────────────
+model Beneficiary {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  order           Int
+  firstName       String
+  middleName      String?
+  lastName        String
+  dateOfBirth     DateTime?
+  age             Int?
+  relationship    String
+  effectivityDate DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// PAYMENTS
+// ─────────────────────────────────────────────
+model Payment {
+  id               String        @id @default(cuid())
+  memberId         String
+  member           Member        @relation(fields: [memberId], references: [id])
+  collectorId      String?
+  collector        Employee?     @relation(fields: [collectorId], references: [id])
+  remittanceId     String?
+  remittance       Remittance?   @relation(fields: [remittanceId], references: [id])
+
+  orNo             String?
+  orDate           DateTime?
+  installmentNo    Int
+  periodMonth      Int
+  periodYear       Int
+  paymentDate      DateTime
+  amount           Decimal       @db.Decimal(10, 2)
+  othersDeduction  Decimal?      @db.Decimal(10, 2)
+  isFree           Boolean       @default(false)
+  isSpotCash       Boolean       @default(false)
+  bcOutright       Boolean       @default(true)   // true = agent took BC during collection; false = BC included in deposit
+  paymentMethod    PaymentMethod @default(CASH)
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([memberId])
+  @@index([periodYear, periodMonth])
+  @@index([remittanceId])
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  GCASH
+  OTHER
+}
+
+// ─────────────────────────────────────────────
+// REMITTANCES
+// ─────────────────────────────────────────────
+model Remittance {
+  id                  String     @id @default(cuid())
+  remittanceNo        String     @unique
+  collectorId         String
+  collector           Employee   @relation(fields: [collectorId], references: [id])
+  branchId            String
+  branch              Branch     @relation(fields: [branchId], references: [id])
+  remittanceDate      DateTime
+  periodMonth         Int
+  periodYear          Int
+  totalCollection     Decimal    @db.Decimal(10, 2)
+  totalCommission     Decimal    @db.Decimal(10, 2)
+  travellingAllowance Decimal    @db.Decimal(10, 2) @default(0)
+  totalOthers         Decimal    @db.Decimal(10, 2) @default(0)
+  netRemittance       Decimal    @db.Decimal(10, 2)
+  totalDeposit        Decimal?   @db.Decimal(10, 2)
+  receivedBy          String?
+  collectionSupervisor String?
+  branchManagerName   String?
+  notes               String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  payments    Payment[]
+  commissions Commission[]
+}
+
+// ─────────────────────────────────────────────
+// PAYMENT EDIT REQUESTS (approval workflow)
+// ─────────────────────────────────────────────
+model PaymentEditRequest {
+  id          String            @id @default(cuid())
+  paymentId   String
+  requestedBy String            // userId of branch staff
+  status      EditRequestStatus @default(PENDING)
+  changes     Json              // requested field changes
+  reason      String?
+  reviewedBy  String?           // userId of approving admin
+  reviewedAt  DateTime?
+  reviewNote  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([paymentId])
+  @@index([status])
+  @@index([requestedBy])
+}
+
+model MemberEditRequest {
+  id          String            @id @default(cuid())
+  memberId    String
+  member      Member            @relation(fields: [memberId], references: [id])
+  requestType String            @default("EDIT") // "EDIT" or "DELETE"
+  requestedBy String            // userId of branch staff
+  status      EditRequestStatus @default(PENDING)
+  changes     Json?             // requested field changes (null for DELETE)
+  reason      String?
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNote  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([memberId])
+  @@index([status])
+}
+
+enum EditRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─────────────────────────────────────────────
+// COMMISSIONS
+// ─────────────────────────────────────────────
+model Commission {
+  id             String     @id @default(cuid())
+  employeeId     String
+  employee       Employee   @relation(fields: [employeeId], references: [id])
+  memberId       String
+  member         Member     @relation(fields: [memberId], references: [id])
+  remittanceId   String?
+  remittance     Remittance? @relation(fields: [remittanceId], references: [id])
+
+  installmentNo  Int
+  paymentDate    DateTime
+  grossAmount    Decimal    @db.Decimal(10, 2)
+  commissionRate Decimal    @db.Decimal(5, 4)
+  commissionAmt  Decimal    @db.Decimal(10, 2)
+  isPaid         Boolean    @default(false)
+  paidDate       DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([employeeId])
+  @@index([memberId])
+}
+
+// ─────────────────────────────────────────────
+// OPERATION CUTOFFS
+// ─────────────────────────────────────────────
+// Tracks the cutoff deadline for each month's operation.
+// Default is last day of the month. Can be extended (e.g., holidays).
+model OperationCutoff {
+  id           String   @id @default(cuid())
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id])
+  month        Int      // 1-12
+  year         Int
+  defaultDate  DateTime // Normal cutoff (last day of month)
+  extendedDate DateTime // Extended cutoff (e.g., April 6 for March)
+  reason       String?  // "Holy Week holidays"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([branchId, month, year])
+}
