@@ -79,6 +79,7 @@ export default function EditMemberForm({ member, branches, agents, collectors, i
     setSuccess(false);
 
     const changes = {
+      mafNo: form.mafNo.trim(),
       firstName: form.firstName.trim(),
       middleName: form.middleName.trim() || null,
       lastName: form.lastName.trim(),
