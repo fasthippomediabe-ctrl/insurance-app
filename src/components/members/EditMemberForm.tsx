@@ -161,7 +161,7 @@ export default function EditMemberForm({ member, branches, agents, collectors, i
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className={labelClass}>MAF No.</label>
-            <input className={`${inputClass} bg-gray-50`} value={form.mafNo} disabled />
+            <input className={inputClass} value={form.mafNo} onChange={(e) => setForm({ ...form, mafNo: e.target.value })} />
           </div>
           <div>
             <label className={labelClass}>Status</label>
