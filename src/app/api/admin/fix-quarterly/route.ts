@@ -2,15 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-const MONTHLY_RATES: Record<string, number> = {
-  FIME: 420, FIQE: 420, FISAE: 420, FIAE: 420,
-  FIME2: 450, FIQE2: 450, FISAE2: 450, FIAE2: 450,
-  NIMC: 340, NIQC: 340, NISAC: 340, NIAC: 340,
-  NIMC2: 380, NIQC2: 380, NISAC2: 380, NIAC2: 380,
-  FIMC: 650, FIQC: 650, FISAC: 650, FIAC: 650,
-  IIMR: 1250, IIQR: 1250, IISAR: 1250, IIAR: 1250,
-};
-
 function getMultiplier(mopCode: string): number {
   const code = mopCode.toUpperCase();
   if (code.includes("IQE") || code.includes("IQC") || code.includes("IQR") || code === "NIQC" || code === "NIQC2" || code === "IIQR") return 3;
@@ -19,7 +10,8 @@ function getMultiplier(mopCode: string): number {
   return 1;
 }
 
-// POST: Revert — restore payments that were wrongly changed from monthly rate to discounted rate
+// POST: Fix only GROUPED payments (multiple payments on same date) to use discounted rate
+// Single monthly payments (1 payment per date) are left untouched
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,36 +34,51 @@ export async function POST(req: NextRequest) {
     if (multiplier <= 1) continue;
 
     const monthlyBase = Number(m.monthlyDue);
-    const wrongDiscountedRate = Math.round(monthlyBase * 0.9 * 100) / 100;
+    const discountedRate = Math.round(monthlyBase * 0.9 * 100) / 100;
 
-    // Find payments that were wrongly changed to the discounted rate
+    // Get all non-free payments at the full monthly rate
     const payments = await db.payment.findMany({
-      where: {
-        memberId: m.id,
-        isFree: false,
-        amount: wrongDiscountedRate,
-      },
-      select: { id: true },
+      where: { memberId: m.id, isFree: false, amount: monthlyBase },
+      select: { id: true, paymentDate: true },
+      orderBy: { paymentDate: "asc" },
     });
 
     if (payments.length === 0) continue;
 
+    // Group by payment date — only fix payments that have multiple on the same date
+    const byDate = new Map<string, string[]>();
+    for (const p of payments) {
+      const dateKey = p.paymentDate.toISOString().split("T")[0];
+      if (!byDate.has(dateKey)) byDate.set(dateKey, []);
+      byDate.get(dateKey)!.push(p.id);
+    }
+
+    const idsToFix: string[] = [];
+    for (const [, ids] of byDate) {
+      if (ids.length >= multiplier) {
+        // This is a grouped payment (e.g., 3 payments on same date for quarterly)
+        idsToFix.push(...ids);
+      }
+    }
+
+    if (idsToFix.length === 0) continue;
+
     totalMembers++;
 
-    // Restore to original monthly rate
     await db.payment.updateMany({
-      where: { id: { in: payments.map((p) => p.id) } },
-      data: { amount: monthlyBase },
+      where: { id: { in: idsToFix } },
+      data: { amount: discountedRate },
     });
 
-    totalFixed += payments.length;
-    details.push(`MAF ${m.mafNo} (${m.firstName} ${m.lastName}) — ${payments.length} payments: ₱${wrongDiscountedRate} → ₱${monthlyBase} (reverted)`);
+    totalFixed += idsToFix.length;
+    const groupCount = idsToFix.length / multiplier;
+    details.push(`MAF ${m.mafNo} (${m.firstName} ${m.lastName}) — ${idsToFix.length} payments in ${groupCount} groups: ₱${monthlyBase} → ₱${discountedRate} (${multiplier}×₱${discountedRate} = ₱${discountedRate * multiplier})`);
   }
 
   return NextResponse.json({
     totalMembers,
     totalFixed,
     details,
-    message: `Reverted ${totalFixed} payments across ${totalMembers} members back to original amounts.`,
+    message: `Fixed ${totalFixed} grouped payments across ${totalMembers} members. Single monthly payments were NOT changed.`,
   });
 }
