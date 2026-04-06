@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { formatCurrency, MONTHS } from "@/lib/utils";
 
 interface Collector { id: string; firstName: string; lastName: string; code: string }
@@ -42,10 +42,33 @@ export default function EditPaymentModal({
   const [collectorId, setCollectorId]     = useState(payment.collectorId ?? "");
   const [notes, setNotes]                 = useState(payment.notes ?? "");
   const [reason, setReason]               = useState("");
+  const [attachment, setAttachment]       = useState<string | null>(null);
+  const [attachmentName, setAttachmentName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError("File too large. Maximum 2MB.");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files are allowed (JPG, PNG, etc.).");
+      return;
+    }
+    setError("");
+    setAttachmentName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachment(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
 
   // Build the diff — only include fields that actually changed
   function buildChanges() {
@@ -81,7 +104,7 @@ export default function EditPaymentModal({
       const res = await fetch(`/api/payments/${payment.id}/edit-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ changes, reason: reason || undefined }),
+        body: JSON.stringify({ changes, reason: reason || undefined, attachment: attachment || undefined }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -253,6 +276,31 @@ export default function EditPaymentModal({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
+            </div>
+
+            {/* Photo Attachment */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Attach Receipt / Evidence <span className="text-gray-400 font-normal">(optional, max 2MB)</span>
+              </label>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              {attachment ? (
+                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={attachment} alt="attachment" className="w-16 h-16 object-cover rounded" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-700 truncate">{attachmentName}</p>
+                    <p className="text-[10px] text-gray-400">Attached</p>
+                  </div>
+                  <button type="button" onClick={() => { setAttachment(null); setAttachmentName(""); if (fileRef.current) fileRef.current.value = ""; }}
+                    className="text-red-500 hover:text-red-700 text-xs font-medium">Remove</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => fileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors">
+                  Click to attach photo
+                </button>
+              )}
             </div>
 
             {error && (

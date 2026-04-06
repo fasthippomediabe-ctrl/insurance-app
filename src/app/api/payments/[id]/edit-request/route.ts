@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const RequestSchema = z.object({
   reason: z.string().optional(),
+  attachment: z.string().optional(), // base64 image data URL
   changes: z.object({
     periodMonth:   z.number().int().min(1).max(12).optional(),
     periodYear:    z.number().int().min(2000).optional(),
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { reason, changes } = parsed.data;
+  const { reason, changes, attachment } = parsed.data;
   const user = session.user as any;
 
   // Check if there's already a pending request for this payment
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       requestedBy: user.id,
       changes,
       reason: reason ?? null,
+      attachment: attachment ?? null,
     },
   });
 
