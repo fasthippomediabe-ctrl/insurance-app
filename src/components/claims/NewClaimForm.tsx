@@ -27,6 +27,11 @@ function checkEligibility(
     return { eligible: false, reason: `${member.planCategory} plan is not claimable (senior citizen plan). Pay the remaining service balance instead.` };
   }
 
+  // Rosewood = only member is insured, not beneficiaries
+  if (member.planCategory === "ROSEWOOD" && deceasedType === "BENEFICIARY") {
+    return { eligible: false, reason: "Rosewood plan: only the member (plan holder) is insured. Beneficiaries are not covered — they can only process the claim when the member dies." };
+  }
+
   // Lapsed = must pay balance for service, not a claim
   if (member.status === "LAPSED") {
     return { eligible: false, reason: "Member is LAPSED. If they want service, they must pay the remaining contract balance. This is not a claim — use Spot Service instead." };
