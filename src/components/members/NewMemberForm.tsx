@@ -169,10 +169,10 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
         {isSpotSvc ? (
           <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
             <p className="text-xs text-orange-600 font-medium mb-2">Spot Service Amount (editable)</p>
-            <input type="number" className="w-full border border-orange-300 rounded-lg px-3 py-2 text-lg font-bold text-orange-700 text-center"
+            <input type="number" min={30000} className="w-full border border-orange-300 rounded-lg px-3 py-2 text-lg font-bold text-orange-700 text-center"
               value={form.spotServiceAmount}
-              onChange={(e) => set("spotServiceAmount", parseInt(e.target.value) || 0)} />
-            <p className="text-xs text-orange-500 mt-1 text-center">Default: ₱30,000 · Adjust for premium services (glass casket, metal, etc.)</p>
+              onChange={(e) => set("spotServiceAmount", Math.max(30000, parseInt(e.target.value) || 30000))} />
+            <p className="text-xs text-orange-500 mt-1 text-center">Minimum: ₱30,000 · Adjust for premium services (glass casket, metal, etc.)</p>
           </div>
         ) : isSpotCash ? (
           <div className="mt-4 grid grid-cols-2 gap-3">
