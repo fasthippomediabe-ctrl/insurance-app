@@ -74,6 +74,10 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               <DeleteMemberButton memberId={member.id} memberName={`${member.firstName} ${member.lastName}`} hasPayments={member.payments.length > 0} requiresApproval />
             </>
           )}
+          <Link href={`/payments/new?memberId=${member.id}`}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+            + Payment
+          </Link>
           <Link href={`/remittance/new`}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium">
             + Remittance
