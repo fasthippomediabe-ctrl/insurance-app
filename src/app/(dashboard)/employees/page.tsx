@@ -33,8 +33,9 @@ export default async function EmployeesPage({
     where.branchId = user.branchId;
     where.primaryPosition = { in: BRANCH_POSITIONS };
   }
+  // HR sees all branches (like admin)
   if (searchParams.position) where.primaryPosition = searchParams.position as EmployeePosition;
-  if (searchParams.branch && user.role === "ADMIN") where.branchId = searchParams.branch;
+  if (searchParams.branch && (user.role === "ADMIN" || user.role === "HR")) where.branchId = searchParams.branch;
   if (searchParams.status === "active") where.isActive = true;
   else if (searchParams.status === "inactive") where.isActive = false;
   // Default: show active only (unless explicitly filtered)

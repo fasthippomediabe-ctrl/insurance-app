@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "HR") return NextResponse.json({ error: "Admin or HR only" }, { status: 403 });
 
   const body = await req.json();
   const { isActive } = body;

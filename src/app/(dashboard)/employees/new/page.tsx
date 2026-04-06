@@ -28,7 +28,7 @@ export default async function NewEmployeePage() {
         branches={branches}
         sponsors={sponsors as any[]}
         defaultBranchId={user.branchId ?? ""}
-        isAdmin={user.role === "ADMIN"}
+        isAdmin={user.role === "ADMIN" || user.role === "HR"}
       />
     </div>
   );

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   const where: any = { isActive: true };
   if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
   if (position) where.primaryPosition = position as EmployeePosition;
-  if (branchId && user.role === "ADMIN") where.branchId = branchId;
+  if (branchId && (user.role === "ADMIN" || user.role === "HR")) where.branchId = branchId;
 
   const employees = await db.employee.findMany({
     where,

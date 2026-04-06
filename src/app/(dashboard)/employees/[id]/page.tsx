@@ -98,7 +98,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
           <PromoteButton
             employeeId={employee.id}
             currentPositions={activePositions.map((p) => p.position)}
-            isAdmin={user.role === "ADMIN"}
+            isAdmin={user.role === "ADMIN" || user.role === "HR"}
           />
         </div>
       </div>
