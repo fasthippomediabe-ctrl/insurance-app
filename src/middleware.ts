@@ -4,8 +4,9 @@ import type { NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow auth API routes
+  // Allow public routes
   if (pathname.startsWith("/api/auth")) return NextResponse.next();
+  if (pathname.startsWith("/verify") || pathname.startsWith("/api/verify")) return NextResponse.next();
 
   // Check for session cookie (NextAuth uses this)
   const sessionToken =
