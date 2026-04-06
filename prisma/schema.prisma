@@ -312,6 +312,16 @@ model Claim {
   deceasedName      String       // Full name of deceased
   dateOfDeath       DateTime
   causeOfDeath      String?
+  deathType         DeathType?   // NATURAL, ACCIDENT, SUICIDE
+  isEligible        Boolean      @default(true)
+  eligibilityNote   String?      // reason if not eligible
+
+  // Spot service (non-members)
+  isSpotService     Boolean      @default(false)
+  spotServiceAmount Decimal?     @db.Decimal(12, 2) // default 30,000
+  spotClientName    String?
+  spotClientContact String?
+  spotClientAddress String?
 
   // Claimant info (who receives the money)
   claimantName      String       // Full name of claimant/beneficiary
@@ -356,6 +366,13 @@ model Claim {
 enum DeceasedType {
   MEMBER
   BENEFICIARY
+  SPOT_SERVICE // Non-member, contract service
+}
+
+enum DeathType {
+  NATURAL    // illness, assassination, provocation
+  ACCIDENT   // accident, misfired/stray bullet
+  SUICIDE    // self-inflicted
 }
 
 enum ClaimStatus {
