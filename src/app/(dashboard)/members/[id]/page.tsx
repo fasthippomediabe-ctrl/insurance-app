@@ -23,9 +23,11 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
 
   if (!member) notFound();
 
-  const totalPaid = member.payments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const balance = Number(member.totalPlanAmount) - totalPaid;
-  const installmentsDone = member.payments.filter((p) => !p.isFree).length;
+  const monthlyDue = Number(member.monthlyDue);
+  // Free months count as 1 month's payment value
+  const totalPaid = member.payments.reduce((sum, p) => sum + (p.isFree ? monthlyDue : Number(p.amount)), 0);
+  const balance = Math.max(0, Number(member.totalPlanAmount) - totalPaid);
+  const installmentsDone = member.payments.length; // all payments including free
   const isLapsed = checkLapseStatus(
     member.payments.map((p) => ({ periodYear: p.periodYear, periodMonth: p.periodMonth })),
     member.effectivityDate ?? member.enrollmentDate,

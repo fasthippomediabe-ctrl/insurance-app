@@ -198,7 +198,10 @@ export default function VerifyPage() {
                           {MONTHS[p.month - 1]} {p.year}
                           {p.isFree && <span className="ml-1.5 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">FREE</span>}
                         </td>
-                        <td className="px-4 py-2.5 text-right font-semibold">{p.isFree ? "FREE" : formatCurrency(p.amount)}</td>
+                        <td className="px-4 py-2.5 text-right font-semibold">
+                          {formatCurrency(p.amount)}
+                          {p.isFree && <span className="text-[10px] text-blue-500 ml-1">(FREE)</span>}
+                        </td>
                         <td className="px-4 py-2.5 text-gray-500 text-xs">
                           {new Date(p.date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                         </td>

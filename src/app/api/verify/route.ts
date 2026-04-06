@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Last name does not match our records." }, { status: 403 });
   }
 
-  const totalPaid = member.payments.reduce((s, p) => s + Number(p.amount), 0);
+  const monthlyDue = Number(member.monthlyDue);
+  // Free months count as 1 month's payment value
+  const totalPaid = member.payments.reduce((s, p) => s + (p.isFree ? monthlyDue : Number(p.amount)), 0);
   const balance = Number(member.totalPlanAmount) - totalPaid;
   const lastPayment = member.payments.length > 0 ? member.payments[0] : null;
 
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
       month: p.periodMonth,
       year: p.periodYear,
       installment: p.installmentNo,
-      amount: Number(p.amount),
+      amount: p.isFree ? monthlyDue : Number(p.amount),
       date: p.paymentDate.toISOString(),
       isFree: p.isFree,
     })),
