@@ -5,10 +5,16 @@ import Link from "next/link";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   STUB_ISSUED: { label: "Stub Issued", color: "bg-gray-100 text-gray-700" },
-  REQUIREMENTS_SUBMITTED: { label: "Docs Submitted", color: "bg-blue-100 text-blue-700" },
-  SUBMITTED_TO_HO: { label: "Sent to HO", color: "bg-indigo-100 text-indigo-700" },
+  DOCS_RECEIVED_BRANCH: { label: "Docs at Branch", color: "bg-blue-100 text-blue-700" },
+  DOCS_IN_TRANSIT: { label: "Docs in Transit", color: "bg-indigo-100 text-indigo-700" },
+  DOCS_RECEIVED_HO: { label: "Received at HO", color: "bg-purple-100 text-purple-700" },
   UNDER_REVIEW: { label: "Under Review", color: "bg-yellow-100 text-yellow-700" },
+  ADDITIONAL_DOCS_NEEDED: { label: "Need More Docs", color: "bg-orange-100 text-orange-700" },
+  IN_PROGRESS: { label: "Processing", color: "bg-blue-100 text-blue-700" },
   APPROVED: { label: "Approved", color: "bg-green-100 text-green-700" },
+  CHEQUE_PREPARING: { label: "Preparing Cheque", color: "bg-cyan-100 text-cyan-700" },
+  CHEQUE_IN_TRANSIT: { label: "Cheque in Transit", color: "bg-indigo-100 text-indigo-700" },
+  CHEQUE_RECEIVED_BRANCH: { label: "Cheque at Branch", color: "bg-purple-100 text-purple-700" },
   RELEASED: { label: "Released", color: "bg-emerald-100 text-emerald-800" },
   REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700" },
 };

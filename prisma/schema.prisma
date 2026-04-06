@@ -336,8 +336,13 @@ model Claim {
   processedBy       String?      // userId who processed
   approvedBy        String?      // userId who approved
 
+  // Tracking
+  courierTracking   String?        // courier tracking number
+  additionalDocsNote String?       // what additional docs are needed
+
   // Documents
   documents         ClaimDocument[]
+  statusLogs        ClaimStatusLog[]
 
   notes             String?
   createdAt         DateTime     @default(now())
@@ -354,13 +359,19 @@ enum DeceasedType {
 }
 
 enum ClaimStatus {
-  STUB_ISSUED        // Branch gave claim stub + requirements list
-  REQUIREMENTS_SUBMITTED // Claimant submitted documents to branch
-  SUBMITTED_TO_HO    // Branch forwarded to head office
-  UNDER_REVIEW       // Head office verifying
-  APPROVED           // Approved, pending release
-  RELEASED           // Amount released to claimant
-  REJECTED           // Claim denied
+  STUB_ISSUED              // Branch gave claim stub + requirements list
+  DOCS_RECEIVED_BRANCH     // Claimant submitted documents to branch
+  DOCS_IN_TRANSIT          // Original docs shipped via courier to HO
+  DOCS_RECEIVED_HO         // Head office received the documents
+  UNDER_REVIEW             // HO reviewing/verifying documents
+  ADDITIONAL_DOCS_NEEDED   // Lacking documents, request more from claimant
+  IN_PROGRESS              // All docs complete, processing claim
+  APPROVED                 // Claim approved
+  REJECTED                 // Claim denied (with reason)
+  CHEQUE_PREPARING         // Finance preparing cheque
+  CHEQUE_IN_TRANSIT        // Cheque shipped back to branch
+  CHEQUE_RECEIVED_BRANCH   // Branch received the cheque
+  RELEASED                 // Cheque released to claimant
 }
 
 model ClaimDocument {
@@ -372,6 +383,19 @@ model ClaimDocument {
   fileData    String   @db.Text // base64 encoded
   uploadedBy  String?
   createdAt   DateTime @default(now())
+
+  @@index([claimId])
+}
+
+model ClaimStatusLog {
+  id          String      @id @default(cuid())
+  claimId     String
+  claim       Claim       @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  note        String?
+  updatedBy   String?     // userId
+  createdAt   DateTime    @default(now())
 
   @@index([claimId])
 }

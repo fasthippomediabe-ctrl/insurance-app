@@ -91,18 +91,23 @@ export async function PATCH(req: NextRequest) {
   const user = session.user as any;
 
   const data = await req.json();
-  const { id, status, approvedAmount, releasedAmount, rejectionReason, notes } = data;
+  const { id, status, approvedAmount, releasedAmount, rejectionReason, notes, courierTracking, additionalDocsNote, statusNote } = data;
 
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  // Get current claim for logging
+  const current = await db.claim.findUnique({ where: { id }, select: { status: true } });
+  if (!current) return NextResponse.json({ error: "Claim not found" }, { status: 404 });
 
   const updateData: any = {};
   const now = new Date();
 
   if (status) {
     updateData.status = status;
-    if (status === "REQUIREMENTS_SUBMITTED") updateData.submittedToHO = null;
-    if (status === "SUBMITTED_TO_HO") updateData.submittedToHO = now;
+    if (status === "DOCS_IN_TRANSIT" && courierTracking) updateData.courierTracking = courierTracking;
+    if (status === "DOCS_RECEIVED_HO") updateData.submittedToHO = now;
     if (status === "UNDER_REVIEW") updateData.verifiedDate = now;
+    if (status === "ADDITIONAL_DOCS_NEEDED" && additionalDocsNote) updateData.additionalDocsNote = additionalDocsNote;
     if (status === "APPROVED") { updateData.approvedDate = now; updateData.approvedBy = user.id; }
     if (status === "RELEASED") { updateData.dateReleased = now; }
     if (status === "REJECTED") { updateData.rejectedDate = now; updateData.rejectionReason = rejectionReason; }
@@ -113,6 +118,19 @@ export async function PATCH(req: NextRequest) {
   if (notes !== undefined) updateData.notes = notes;
 
   const claim = await db.claim.update({ where: { id }, data: updateData });
+
+  // Log status change
+  if (status && status !== current.status) {
+    await db.claimStatusLog.create({
+      data: {
+        claimId: id,
+        fromStatus: current.status,
+        toStatus: status,
+        note: statusNote || rejectionReason || additionalDocsNote || courierTracking || null,
+        updatedBy: user.id,
+      },
+    });
+  }
 
   return NextResponse.json(claim);
 }

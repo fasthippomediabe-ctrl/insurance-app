@@ -15,6 +15,7 @@ export default async function ClaimDetailPage({ params }: { params: { id: string
           branch: { select: { name: true } } },
       },
       documents: { orderBy: { createdAt: "desc" } },
+      statusLogs: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -32,9 +33,15 @@ export default async function ClaimDetailPage({ params }: { params: { id: string
         dateReleased: claim.dateReleased?.toISOString() ?? null,
         submittedToHO: claim.submittedToHO?.toISOString() ?? null,
         approvedDate: claim.approvedDate?.toISOString() ?? null,
+        courierTracking: claim.courierTracking ?? null,
+        additionalDocsNote: claim.additionalDocsNote ?? null,
         documents: claim.documents.map((d) => ({
           id: d.id, docType: d.docType, fileName: d.fileName,
           fileData: d.fileData, createdAt: d.createdAt.toISOString(),
+        })),
+        statusLogs: claim.statusLogs.map((l) => ({
+          id: l.id, fromStatus: l.fromStatus, toStatus: l.toStatus,
+          note: l.note, createdAt: l.createdAt.toISOString(),
         })),
         member: { ...claim.member, branch: claim.member.branch?.name ?? "" },
       }}
