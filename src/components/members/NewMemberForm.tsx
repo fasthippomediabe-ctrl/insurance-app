@@ -37,6 +37,7 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
     planCategory: "EUCALYPTUS" as PlanCategory,
     mopCode: "FIME" as MopCode,
     spotCash: false,
+    spotServiceAmount: 30000,
     firstName: "",
     middleName: "",
     lastName: "",
@@ -67,22 +68,31 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
     setBeneficiaries((prev) => prev.map((b, i) => i === index ? { ...b, [field]: value } : b));
   }
 
-  const monthly = getMonthlyDue(form.mopCode);
-  const paymentAmount = getPaymentAmount(form.mopCode);
-  const total = getTotalPlanAmount(form.mopCode);
-  const spotCashAmt = getSpotCashAmount(form.mopCode);
+  const isSpotCash = form.mopCode === "SPOT_CASH";
+  const isSpotSvc = form.mopCode === "SPOT_SERVICE";
+
+  // For Spot Cash, compute price based on plan category's monthly rate
+  const planMopBase = isSpotCash
+    ? (form.planCategory === "EUCALYPTUS" ? "FIME2" : form.planCategory === "CHERRY" ? "NIMC2" : form.planCategory === "CONIFER" ? "FIMC" : "IIMR") as any
+    : form.mopCode;
+  const monthly = isSpotSvc ? 30000 : isSpotCash ? getMonthlyDue(planMopBase) : getMonthlyDue(form.mopCode);
+  const paymentAmount = isSpotSvc ? 30000 : isSpotCash ? 0 : getPaymentAmount(form.mopCode);
+  const total = isSpotSvc ? (form as any).spotServiceAmount ?? 30000 : isSpotCash ? getMonthlyDue(planMopBase) * 60 : getTotalPlanAmount(form.mopCode);
+  const spotCashAmt = isSpotCash ? total * 0.9 : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const isSpotService = form.mopCode === "SPOT_SERVICE";
     const payload = {
       ...form,
       age: form.age ? parseInt(form.age) : undefined,
-      spotCash: form.mopCode === "SPOT_CASH" || form.spotCash,
-      status: isSpotService ? "DECEASED_CLAIMANT" : undefined,
+      spotCash: isSpotCash || form.spotCash,
+      status: isSpotSvc ? "DECEASED_CLAIMANT" : undefined,
+      // Override amounts for spot cash/service
+      ...(isSpotCash ? { monthlyDue: 0, totalPlanAmount: spotCashAmt, spotCashAmount: spotCashAmt } : {}),
+      ...(isSpotSvc ? { monthlyDue: form.spotServiceAmount, totalPlanAmount: form.spotServiceAmount, spotCashAmount: form.spotServiceAmount } : {}),
       beneficiaries: beneficiaries
         .filter((b) => b.firstName.trim())
         .map((b) => ({
@@ -156,24 +166,45 @@ export default function NewMemberForm({ branches, agents, collectors, defaultBra
         </div>
 
         {/* Pricing Summary */}
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-blue-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-blue-600 font-medium">Monthly Due</p>
-            <p className="text-lg font-bold text-blue-700">{formatCurrency(monthly)}</p>
+        {isSpotSvc ? (
+          <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <p className="text-xs text-orange-600 font-medium mb-2">Spot Service Amount (editable)</p>
+            <input type="number" className="w-full border border-orange-300 rounded-lg px-3 py-2 text-lg font-bold text-orange-700 text-center"
+              value={form.spotServiceAmount}
+              onChange={(e) => set("spotServiceAmount", parseInt(e.target.value) || 0)} />
+            <p className="text-xs text-orange-500 mt-1 text-center">Default: ₱30,000 · Adjust for premium services (glass casket, metal, etc.)</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 font-medium">Per Payment</p>
-            <p className="text-lg font-bold text-gray-700">{formatCurrency(paymentAmount)}</p>
+        ) : isSpotCash ? (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500 font-medium">Contract Price (5 yrs)</p>
+              <p className="text-lg font-bold text-gray-700">{formatCurrency(total)}</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-green-600 font-medium">Spot Cash (-10%)</p>
+              <p className="text-lg font-bold text-green-700">{formatCurrency(spotCashAmt)}</p>
+            </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 font-medium">Total (5 yrs)</p>
-            <p className="text-lg font-bold text-gray-700">{formatCurrency(total)}</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-blue-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-blue-600 font-medium">Monthly Due</p>
+              <p className="text-lg font-bold text-blue-700">{formatCurrency(monthly)}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500 font-medium">Per Payment</p>
+              <p className="text-lg font-bold text-gray-700">{formatCurrency(paymentAmount)}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500 font-medium">Total (5 yrs)</p>
+              <p className="text-lg font-bold text-gray-700">{formatCurrency(total)}</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-green-600 font-medium">Spot Cash (-10%)</p>
+              <p className="text-lg font-bold text-green-700">{formatCurrency(total * 0.9)}</p>
+            </div>
           </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-green-600 font-medium">Spot Cash (-10%)</p>
-            <p className="text-lg font-bold text-green-700">{formatCurrency(spotCashAmt)}</p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Section: Personal Info */}
