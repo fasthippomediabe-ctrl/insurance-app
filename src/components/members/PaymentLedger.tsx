@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 
 interface Payment {
@@ -23,21 +25,21 @@ export default function PaymentLedger({
   effectivityDate: string;
   monthlyDue: number;
 }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const startDate = new Date(effectivityDate);
   const today = new Date();
 
-  // Build a map of paid months
   const paidMap = new Map(
     payments.map((p) => [`${p.periodYear}-${p.periodMonth}`, p])
   );
 
-  // Generate all months from effectivity to today (max 60 installments)
   type MonthEntry = {
-    year: number;
-    month: number;
-    installmentNo: number;
-    payment: Payment | undefined;
-    status: "paid" | "unpaid" | "free" | "future";
+    year: number; month: number; installmentNo: number;
+    payment: Payment | undefined; status: "paid" | "unpaid" | "free" | "future";
   };
 
   const rows: MonthEntry[] = [];
@@ -49,36 +51,50 @@ export default function PaymentLedger({
     const m = cursor.getMonth() + 1;
     const isFuture = cursor > today;
     const payment = paidMap.get(`${y}-${m}`);
-
     rows.push({
-      year: y,
-      month: m,
-      installmentNo,
-      payment,
-      status: payment
-        ? payment.isFree ? "free" : "paid"
-        : isFuture ? "future" : "unpaid",
+      year: y, month: m, installmentNo, payment,
+      status: payment ? (payment.isFree ? "free" : "paid") : (isFuture ? "future" : "unpaid"),
     });
-
     cursor.setMonth(cursor.getMonth() + 1);
     installmentNo++;
   }
 
-  // Group by year
   const byYear = rows.reduce<Record<number, MonthEntry[]>>((acc, row) => {
     if (!acc[row.year]) acc[row.year] = [];
     acc[row.year].push(row);
     return acc;
   }, {});
 
-  const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const totalPaid = payments.reduce((s, p) => s + (p.isFree ? monthlyDue : Number(p.amount)), 0);
   const unpaidCount = rows.filter((r) => r.status === "unpaid").length;
 
-  // Detect consecutive unpaid streak (for lapse warning)
   let maxStreak = 0, streak = 0;
   for (const r of rows) {
     if (r.status === "unpaid") { streak++; maxStreak = Math.max(maxStreak, streak); }
     else streak = 0;
+  }
+
+  function startEdit(payment: Payment) {
+    setEditing(payment.id);
+    setEditAmount(String(Number(payment.amount)));
+  }
+
+  async function saveEdit(paymentId: string) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/payments/${paymentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: parseFloat(editAmount) }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      setEditing(null);
+      router.refresh();
+    } catch (e) {
+      alert("Failed to save. Admin access required.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -111,15 +127,46 @@ export default function PaymentLedger({
                   : e.status === "unpaid" ? "bg-red-50 border-red-300 text-red-600"
                   : "bg-gray-50 border-gray-200 text-gray-400";
 
+                const isEditing = e.payment && editing === e.payment.id;
+
                 return (
                   <div key={`${e.year}-${e.month}`}
-                    className={`border rounded-lg p-1.5 text-center cursor-default transition-all ${colorClass}`}
-                    title={e.payment ? `Paid ${formatCurrency(Number(e.payment.amount))} on ${new Date(e.payment.paymentDate).toLocaleDateString("en-PH")}` : e.status}>
+                    className={`border rounded-lg p-1.5 text-center transition-all ${colorClass} ${
+                      e.payment ? "cursor-pointer hover:ring-2 hover:ring-blue-400" : "cursor-default"
+                    }`}
+                    onClick={() => e.payment && !isEditing && startEdit(e.payment)}
+                    title={e.payment
+                      ? `Click to edit — Paid ${formatCurrency(Number(e.payment.amount))} on ${new Date(e.payment.paymentDate).toLocaleDateString("en-PH")}`
+                      : e.status}>
                     <p className="text-xs font-semibold">{MONTHS[e.month - 1]}</p>
                     <p className="text-xs opacity-70">#{e.installmentNo}</p>
-                    {e.payment && (
+                    {isEditing ? (
+                      <div className="mt-0.5" onClick={(ev) => ev.stopPropagation()}>
+                        <input
+                          type="number"
+                          className="w-full text-[10px] border border-blue-400 rounded px-1 py-0.5 text-center"
+                          value={editAmount}
+                          onChange={(ev) => setEditAmount(ev.target.value)}
+                          onKeyDown={(ev) => {
+                            if (ev.key === "Enter") saveEdit(e.payment!.id);
+                            if (ev.key === "Escape") setEditing(null);
+                          }}
+                          autoFocus
+                        />
+                        <div className="flex gap-0.5 mt-0.5">
+                          <button onClick={() => saveEdit(e.payment!.id)} disabled={saving}
+                            className="flex-1 text-[9px] bg-blue-500 text-white rounded py-0.5 hover:bg-blue-600">
+                            {saving ? "..." : "Save"}
+                          </button>
+                          <button onClick={() => setEditing(null)}
+                            className="flex-1 text-[9px] bg-gray-300 text-gray-700 rounded py-0.5 hover:bg-gray-400">
+                            Esc
+                          </button>
+                        </div>
+                      </div>
+                    ) : e.payment ? (
                       <p className="text-xs font-medium mt-0.5">{formatCurrency(Number(e.payment.amount))}</p>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
