@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
 export default function ProfileForm({ profile }: { profile: Profile }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [username, setUsername] = useState(profile.username);
   const [displayName, setDisplayName] = useState(profile.displayName ?? "");
   const [email, setEmail] = useState(profile.email ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
@@ -46,7 +47,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
     }
 
     try {
-      const body: any = { displayName, email, phone, avatar };
+      const body: any = { username, displayName, email, phone, avatar };
       if (newPassword) {
         body.currentPassword = currentPassword;
         body.newPassword = newPassword;
@@ -109,21 +110,24 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      {/* Account Info (read-only) */}
+      {/* Account Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Account</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-gray-400">Username</p>
-            <p className="font-bold">{profile.username}</p>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Username</label>
+            <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Role</p>
-            <p className="font-bold">{ROLE_LABELS[profile.role] ?? profile.role}</p>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
+            <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50"
+              value={ROLE_LABELS[profile.role] ?? profile.role} disabled />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Branch</p>
-            <p className="font-bold">{profile.branch ?? "All Branches"}</p>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Branch</label>
+            <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50"
+              value={profile.branch ?? "All Branches"} disabled />
           </div>
         </div>
       </div>

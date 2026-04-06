@@ -28,9 +28,17 @@ export async function PATCH(req: NextRequest) {
   const user = session.user as any;
 
   const data = await req.json();
-  const { displayName, email, phone, avatar, currentPassword, newPassword } = data;
+  const { username, displayName, email, phone, avatar, currentPassword, newPassword } = data;
 
   const updateData: any = {};
+  if (username && username !== user.username) {
+    // Check if username is taken
+    const existing = await db.user.findUnique({ where: { username } });
+    if (existing && existing.id !== user.id) {
+      return NextResponse.json({ error: "Username is already taken." }, { status: 409 });
+    }
+    updateData.username = username;
+  }
   if (displayName !== undefined) updateData.displayName = displayName || null;
   if (email !== undefined) updateData.email = email || null;
   if (phone !== undefined) updateData.phone = phone || null;
