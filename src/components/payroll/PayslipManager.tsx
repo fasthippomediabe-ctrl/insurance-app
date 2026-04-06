@@ -1,0 +1,135 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { formatCurrency, MONTHS } from "@/lib/utils";
+import Link from "next/link";
+import PayslipPrintView from "./PayslipPrintView";
+
+interface Payslip {
+  id: string; employeeId: string; cutoffLabel: string; periodStart: string; periodEnd: string; payDate: string;
+  basicPay: number; overtime: number; holidayPay: number; allowances: number; otherEarnings: number; grossPay: number;
+  sss: number; philhealth: number; pagibig: number; tax: number; cashAdvance: number; absences: number;
+  otherDeductions: number; totalDeductions: number; netPay: number; status: string; notes: string | null;
+  employee: { id: string; firstName: string; lastName: string; employeeNo: string; primaryPosition: string; branch: string };
+}
+
+export default function PayslipManager({ payslips }: { payslips: Payslip[] }) {
+  const router = useRouter();
+  const [generating, setGenerating] = useState(false);
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [half, setHalf] = useState(1);
+  const [msg, setMsg] = useState("");
+  const [viewing, setViewing] = useState<Payslip | null>(null);
+
+  async function generate() {
+    setGenerating(true);
+    setMsg("");
+    try {
+      const res = await fetch("/api/payroll/payslips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, year, half }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setMsg(`Generated ${data.created} payslips.`);
+      router.refresh();
+    } catch (e: any) {
+      setMsg("Error: " + e.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  if (viewing) {
+    return <PayslipPrintView payslip={viewing} onBack={() => setViewing(null)} />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Payslips</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{payslips.length} payslips</p>
+        </div>
+        <Link href="/payroll" className="text-sm text-purple-600 hover:underline">Back to Payroll</Link>
+      </div>
+
+      {/* Generate Payslips */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-800 mb-3">Generate Payslips</h2>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
+            <select className="border border-gray-300 rounded-lg px-2 py-2 text-sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Year</label>
+            <input type="number" className="w-20 border border-gray-300 rounded-lg px-2 py-2 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Cutoff</label>
+            <select className="border border-gray-300 rounded-lg px-2 py-2 text-sm" value={half} onChange={(e) => setHalf(Number(e.target.value))}>
+              <option value={1}>1st Half (1st-15th)</option>
+              <option value={2}>2nd Half (16th-End)</option>
+            </select>
+          </div>
+          <button onClick={generate} disabled={generating}
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg">
+            {generating ? "Generating..." : "Generate Payslips"}
+          </button>
+        </div>
+        {msg && <p className={`mt-3 text-sm ${msg.startsWith("Error") ? "text-red-600" : "text-green-600"}`}>{msg}</p>}
+      </div>
+
+      {/* Payslips Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr>
+                <th className="px-4 py-2.5 text-left">Employee</th>
+                <th className="px-4 py-2.5 text-center">Position</th>
+                <th className="px-4 py-2.5 text-left">Period</th>
+                <th className="px-4 py-2.5 text-right">Gross</th>
+                <th className="px-4 py-2.5 text-right">Deductions</th>
+                <th className="px-4 py-2.5 text-right">Net Pay</th>
+                <th className="px-4 py-2.5 text-center">Status</th>
+                <th className="px-4 py-2.5 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {payslips.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800">{p.employee.firstName} {p.employee.lastName}</td>
+                  <td className="px-4 py-3 text-center text-xs">{p.employee.primaryPosition}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{p.cutoffLabel}</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(p.grossPay)}</td>
+                  <td className="px-4 py-3 text-right text-red-600">{formatCurrency(p.totalDeductions)}</td>
+                  <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(p.netPay)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
+                      p.status === "RELEASED" ? "bg-green-100 text-green-700" :
+                      p.status === "APPROVED" ? "bg-blue-100 text-blue-700" :
+                      "bg-yellow-100 text-yellow-700"
+                    }`}>{p.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => setViewing(p)} className="text-purple-600 hover:underline text-xs font-medium">View Payslip</button>
+                  </td>
+                </tr>
+              ))}
+              {payslips.length === 0 && (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No payslips yet. Generate above.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -43,6 +43,7 @@ model User {
 enum UserRole {
   ADMIN
   BRANCH_STAFF
+  HR
 }
 
 // ─────────────────────────────────────────────
@@ -88,6 +89,12 @@ model Employee {
   payments         Payment[]
   commissions      Commission[]
   remittances      Remittance[]
+
+  // Payroll
+  salaryProfile    SalaryProfile?
+  payslips         Payslip[]
+  loans            Loan[]
+  thirteenthMonth  ThirteenthMonth[]
 
   @@index([primaryPosition])
   @@index([branchId])
@@ -450,4 +457,149 @@ model OperationCutoff {
   updatedAt    DateTime @updatedAt
 
   @@unique([branchId, month, year])
+}
+
+// ─────────────────────────────────────────────
+// PAYROLL — SALARY PROFILES
+// ─────────────────────────────────────────────
+model SalaryProfile {
+  id              String   @id @default(cuid())
+  employeeId      String   @unique
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  basicSalary     Decimal  @db.Decimal(12, 2) // Monthly basic salary
+  riceAllowance   Decimal  @db.Decimal(10, 2) @default(0)
+  transpoAllowance Decimal @db.Decimal(10, 2) @default(0)
+  otherAllowance  Decimal  @db.Decimal(10, 2) @default(0)
+  paySchedule     PaySchedule @default(REGULAR) // REGULAR = 5th/20th, EXECUTIVE = 15th/end
+  sssNo           String?
+  philhealthNo    String?
+  pagibigNo       String?
+  tinNo           String?
+  sssContribution   Decimal @db.Decimal(10, 2) @default(0)
+  philhealthContribution Decimal @db.Decimal(10, 2) @default(0)
+  pagibigContribution Decimal @db.Decimal(10, 2) @default(0)
+  withholdingTax  Decimal  @db.Decimal(10, 2) @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum PaySchedule {
+  REGULAR    // 5th and 20th
+  EXECUTIVE  // 15th and end of month
+}
+
+// ─────────────────────────────────────────────
+// PAYROLL — PAYSLIPS
+// ─────────────────────────────────────────────
+model Payslip {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  periodStart    DateTime // e.g. April 1
+  periodEnd      DateTime // e.g. April 15
+  payDate        DateTime // e.g. April 20
+  cutoffLabel    String   // e.g. "April 1-15, 2026" or "April 16-30, 2026"
+
+  // Earnings
+  basicPay       Decimal  @db.Decimal(12, 2) // half of monthly basic
+  overtime       Decimal  @db.Decimal(10, 2) @default(0)
+  holidayPay     Decimal  @db.Decimal(10, 2) @default(0)
+  allowances     Decimal  @db.Decimal(10, 2) @default(0) // rice + transpo + other
+  otherEarnings  Decimal  @db.Decimal(10, 2) @default(0)
+  grossPay       Decimal  @db.Decimal(12, 2)
+
+  // Deductions
+  sss            Decimal  @db.Decimal(10, 2) @default(0)
+  philhealth     Decimal  @db.Decimal(10, 2) @default(0)
+  pagibig        Decimal  @db.Decimal(10, 2) @default(0)
+  tax            Decimal  @db.Decimal(10, 2) @default(0)
+  cashAdvance    Decimal  @db.Decimal(10, 2) @default(0)
+  absences       Decimal  @db.Decimal(10, 2) @default(0)
+  otherDeductions Decimal @db.Decimal(10, 2) @default(0)
+  totalDeductions Decimal @db.Decimal(12, 2)
+
+  netPay         Decimal  @db.Decimal(12, 2)
+  notes          String?
+  status         PayslipStatus @default(DRAFT)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([payDate])
+  @@index([status])
+}
+
+enum PayslipStatus {
+  DRAFT
+  APPROVED
+  RELEASED
+}
+
+// ─────────────────────────────────────────────
+// PAYROLL — LOANS / CASH ADVANCES
+// ─────────────────────────────────────────────
+model Loan {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  type           LoanType @default(CASH_ADVANCE)
+  description    String?
+  amount         Decimal  @db.Decimal(12, 2) // Total loan amount
+  balance        Decimal  @db.Decimal(12, 2) // Remaining balance
+  monthlyDeduction Decimal @db.Decimal(10, 2) @default(0) // Per-cutoff deduction
+  startDate      DateTime
+  status         LoanStatus @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  payments       LoanPayment[]
+
+  @@index([employeeId])
+  @@index([status])
+}
+
+enum LoanType {
+  CASH_ADVANCE
+  SSS_LOAN
+  PAGIBIG_LOAN
+  SALARY_LOAN
+  OTHER
+}
+
+enum LoanStatus {
+  ACTIVE
+  FULLY_PAID
+  CANCELLED
+}
+
+model LoanPayment {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id])
+  amount    Decimal  @db.Decimal(10, 2)
+  payDate   DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([loanId])
+}
+
+// ─────────────────────────────────────────────
+// PAYROLL — 13TH MONTH PAY
+// ─────────────────────────────────────────────
+model ThirteenthMonth {
+  id           String   @id @default(cuid())
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id])
+  year         Int
+  half         Int      // 1 = Jan-Jun (Q2 release), 2 = Jul-Dec (Q4 release)
+  totalBasic   Decimal  @db.Decimal(12, 2) // Total basic earned in period
+  amount       Decimal  @db.Decimal(12, 2) // 13th month amount = totalBasic / 12
+  status       PayslipStatus @default(DRAFT)
+  releasedDate DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([employeeId, year, half])
+  @@index([employeeId])
 }
