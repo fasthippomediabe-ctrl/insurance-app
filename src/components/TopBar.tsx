@@ -2,6 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { Session } from "next-auth";
+import Link from "next/link";
 
 export default function TopBar({ session, onMenuToggle }: { session: Session; onMenuToggle?: () => void }) {
   const user = session.user as any;
@@ -36,15 +37,15 @@ export default function TopBar({ session, onMenuToggle }: { session: Session; on
         )}
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+        <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
             style={{ background: "#1535b0" }}>
             {user.username?.[0]?.toUpperCase()}
           </div>
           <span className="text-sm text-gray-600 hidden sm:inline">
             <span className="font-semibold text-gray-800">{user.username}</span>
           </span>
-        </div>
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border"

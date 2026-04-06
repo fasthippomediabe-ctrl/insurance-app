@@ -29,15 +29,19 @@ model Branch {
 // USERS (System Login Accounts)
 // ─────────────────────────────────────────────
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  role      UserRole @default(BRANCH_STAFF)
-  branchId  String?
-  branch    Branch?  @relation(fields: [branchId], references: [id])
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String
+  role        UserRole @default(BRANCH_STAFF)
+  branchId    String?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  isActive    Boolean  @default(true)
+  displayName String?
+  email       String?
+  phone       String?
+  avatar      String?  @db.Text // base64 profile picture
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum UserRole {
