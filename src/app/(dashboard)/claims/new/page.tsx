@@ -11,7 +11,7 @@ export default async function NewClaimPage() {
   const members = await db.member.findMany({
     where: {
       ...branchFilter,
-      status: { in: ["ACTIVE", "REINSTATED", "FULLY_PAID"] },
+      status: { not: "CANCELLED" },
     },
     select: {
       id: true, mafNo: true, firstName: true, lastName: true, planCategory: true,
