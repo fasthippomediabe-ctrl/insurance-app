@@ -14,6 +14,7 @@ interface Member {
 const CONTESTABILITY_MONTHS = 8;
 const SUICIDE_CONTESTABILITY_MONTHS = 24;
 const SPOT_SERVICE_DEFAULT = 30000;
+const CLAIMABLE_PLANS = ["EUCALYPTUS", "ROSEWOOD", "CONIFER"];
 
 function checkEligibility(
   member: Member,
@@ -21,9 +22,14 @@ function checkEligibility(
   deathType: string,
   dateOfDeath: string,
 ): { eligible: boolean; reason: string } {
-  // Lapsed = not eligible
+  // Cherry plan = no claims (senior citizen plan)
+  if (!CLAIMABLE_PLANS.includes(member.planCategory)) {
+    return { eligible: false, reason: `${member.planCategory} plan is not claimable (senior citizen plan). Pay the remaining service balance instead.` };
+  }
+
+  // Lapsed = must pay balance for service, not a claim
   if (member.status === "LAPSED") {
-    return { eligible: false, reason: "Member is LAPSED. Must pay remaining balance before claiming." };
+    return { eligible: false, reason: "Member is LAPSED. If they want service, they must pay the remaining contract balance. This is not a claim — use Spot Service instead." };
   }
 
   if (member.status === "DECEASED_CLAIMANT") {
@@ -274,6 +280,9 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
                         m.status === "ACTIVE" || m.status === "REINSTATED" ? "bg-green-100 text-green-700" :
                         m.status === "LAPSED" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-500"
                       }`}>{m.status}</span>
+                      {!CLAIMABLE_PLANS.includes(m.planCategory) && (
+                        <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-bold">NO CLAIM</span>
+                      )}
                     </button>
                   ))}
                   {members.filter((m) => {
