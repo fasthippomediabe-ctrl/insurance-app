@@ -210,6 +210,52 @@ export default function AdminPanel({ branches, users, agents, collectors }: {
           </div>
         </div>
       </div>
+
+      {/* Data Fix Tools */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-800 mb-3">Data Fix Tools</h2>
+        <div className="flex flex-wrap gap-3">
+          <FixButton
+            label="Fix Quarterly/SA/Annual Amounts"
+            description="Apply 10% discount to quarterly, semi-annual, and annual payments that were imported at full monthly rate"
+            endpoint="/api/admin/fix-quarterly"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FixButton({ label, description, endpoint }: { label: string; description: string; endpoint: string }) {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function run() {
+    if (!confirm(`Run "${label}"? This will modify payment records.`)) return;
+    setRunning(true); setResult(null);
+    try {
+      const res = await fetch(endpoint, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setResult(`${data.message}\n${(data.details ?? []).join("\n")}`);
+    } catch (e: any) {
+      setResult("Error: " + e.message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 max-w-sm">
+      <p className="font-medium text-sm text-gray-800">{label}</p>
+      <p className="text-xs text-gray-500 mt-1">{description}</p>
+      <button onClick={run} disabled={running}
+        className="mt-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+        {running ? "Running..." : "Run Fix"}
+      </button>
+      {result && (
+        <pre className="mt-2 bg-gray-50 rounded-lg p-2 text-[10px] text-gray-600 max-h-40 overflow-y-auto whitespace-pre-wrap">{result}</pre>
+      )}
     </div>
   );
 }
