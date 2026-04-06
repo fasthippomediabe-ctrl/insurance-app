@@ -74,6 +74,10 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
           <Link href="/employees" className="text-gray-400 hover:text-gray-600 text-sm">
             ← Back
           </Link>
+          {(employee as any).photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={(employee as any).photo} alt="" className="w-14 h-14 rounded-xl object-cover border-2 border-gray-200" />
+          )}
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               {employee.firstName} {employee.middleName ? employee.middleName[0] + ". " : ""}{employee.lastName}

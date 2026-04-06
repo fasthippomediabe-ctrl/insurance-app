@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { EmployeePosition } from "@prisma/client";
 import { POSITION_LABELS, COMMISSION_POSITIONS, SALARIED_POSITIONS } from "@/lib/utils";
@@ -33,6 +33,17 @@ export default function EmployeeForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+
+  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setError("Photo too large. Max 2MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result as string);
+    reader.readAsDataURL(file);
+  }
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -107,6 +118,7 @@ export default function EmployeeForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          photo: photo || undefined,
           gender: form.gender || undefined,
           sponsorId: form.sponsorId || undefined,
           middleName: form.middleName || undefined,
@@ -129,6 +141,34 @@ export default function EmployeeForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+
+      {/* Photo Upload */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h2 className="font-semibold text-gray-800 mb-4 pb-2 border-b">Employee Photo</h2>
+        <div className="flex items-center gap-5">
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt="Employee" className="w-24 h-24 rounded-xl object-cover border-2 border-gray-200" />
+          ) : (
+            <div className="w-24 h-24 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+          )}
+          <div>
+            <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            <button type="button" onClick={() => photoRef.current?.click()}
+              className="text-sm font-medium text-blue-600 hover:underline">
+              {photo ? "Change Photo" : "Upload Photo"}
+            </button>
+            {photo && (
+              <button type="button" onClick={() => setPhoto(null)} className="text-sm text-red-500 hover:underline ml-3">Remove</button>
+            )}
+            <p className="text-xs text-gray-400 mt-1">Optional. Max 2MB. JPG or PNG.</p>
+          </div>
+        </div>
+      </div>
 
       {/* Employment Details */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
