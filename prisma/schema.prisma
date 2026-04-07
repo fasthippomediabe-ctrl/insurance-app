@@ -740,3 +740,55 @@ model ThirteenthMonth {
   @@unique([employeeId, year, half])
   @@index([employeeId])
 }
+
+// ─────────────────────────────────────────────
+// ACCOUNTING
+// ─────────────────────────────────────────────
+model ExpenseCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  type        ExpenseType @default(OPERATING)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  expenses    Expense[]
+}
+
+enum ExpenseType {
+  OPERATING       // rent, utilities, supplies
+  PAYROLL         // salaries, allowances (tracked here for reporting)
+  COMMISSION      // commissions, incentives
+  CLAIMS          // claims released
+  ADMINISTRATIVE  // admin costs
+  OTHER
+}
+
+model Expense {
+  id           String          @id @default(cuid())
+  expenseNo    String          @unique
+  categoryId   String
+  category     ExpenseCategory @relation(fields: [categoryId], references: [id])
+  branchId     String?
+  amount       Decimal         @db.Decimal(12, 2)
+  expenseDate  DateTime
+  description  String
+  vendor       String?
+  paymentMethod String?        // CASH, BANK, GCASH, etc.
+  receiptNo    String?
+  receiptPhoto String?         @db.Text // base64 image
+  notes        String?
+  recordedBy   String?         // user id
+  status       ExpenseStatus   @default(POSTED)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([categoryId])
+  @@index([branchId])
+  @@index([expenseDate])
+}
+
+enum ExpenseStatus {
+  POSTED
+  VOID
+}
