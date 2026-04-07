@@ -50,6 +50,7 @@ interface RemittanceRow {
   others: string;
   // computed
   ta: number;
+  taManual: boolean; // true = user overrode TA manually
   bc: number;
   net: number;
   lookupState: "idle" | "loading" | "found" | "error";
@@ -92,6 +93,7 @@ function emptyRow(orDate: string): RemittanceRow {
     ncom: "",
     others: "",
     ta: 0,
+    taManual: false,
     bc: 0,
     net: 0,
     lookupState: "idle",
@@ -110,9 +112,10 @@ function computeRowTotals(
   plan: PlanCategory | null,
   others: number,
   priorPaidCount: number,
-  bcOutright: boolean = true
+  bcOutright: boolean = true,
+  manualTa?: number
 ): Pick<RemittanceRow, "bc" | "ta" | "net"> {
-  if (!plan || startInstallment <= 0) return { bc: 0, ta: 0, net: amount - others };
+  if (!plan || startInstallment <= 0) return { bc: 0, ta: manualTa ?? 0, net: amount - (manualTa ?? 0) - others };
   let bc = 0;
   let ta = 0;
   for (let i = 0; i < monthsCount; i++) {
@@ -124,6 +127,8 @@ function computeRowTotals(
       }
     }
   }
+  // Manual TA override
+  if (manualTa !== undefined) ta = manualTa;
   // If BC outright: agent took it, deduct from net (collector remits less)
   // If BC NOT outright: BC stays in deposit, collector remits full amount minus TA only
   const bcDeduction = bcOutright ? bc : 0;
@@ -227,7 +232,7 @@ export default function NewRemittanceForm({
         bcOutright: member.agentActive, // active agent = outright by default; deactivated = must deposit
         agentActive: member.agentActive ?? true,
         com: "", ncom: "", others: "",
-        ta: 0, bc: 0, net: 0,
+        ta: 0, taManual: false, bc: 0, net: 0,
         lookupState: "found", lookupError: "",
       });
     } catch {
@@ -241,7 +246,7 @@ export default function NewRemittanceForm({
       if (r.key !== key) return r;
       const amount = getRowAmount(r);
       const others = parseFloat(r.others) || 0;
-      const { bc, ta, net } = computeRowTotals(amount, inst, r.monthsCount, r.planCategory, others, r.priorPaidCount, r.bcOutright);
+      const { bc, ta, net } = computeRowTotals(amount, inst, r.monthsCount, r.planCategory, others, r.priorPaidCount, r.bcOutright, r.taManual ? r.ta : undefined);
       return { ...r, installmentNo: inst, bc, ta, net };
     }));
   }
@@ -267,7 +272,7 @@ export default function NewRemittanceForm({
         months = Math.max(1, Math.round(amount / r.monthlyDue));
       }
 
-      const { bc, ta, net } = computeRowTotals(amount, inst, months, r.planCategory, others, r.priorPaidCount, r.bcOutright);
+      const { bc, ta, net } = computeRowTotals(amount, inst, months, r.planCategory, others, r.priorPaidCount, r.bcOutright, r.taManual ? r.ta : undefined);
       return { ...updated, installmentNo: inst, monthsCount: months, bc, ta, net };
     }));
   }
@@ -284,7 +289,7 @@ export default function NewRemittanceForm({
         if (amount > 0) {
           const months = r.monthlyDue > 0 ? Math.max(1, Math.round(amount / r.monthlyDue)) : 1;
           const others = parseFloat(r.others) || 0;
-          const { bc, ta, net } = computeRowTotals(amount, paidInst, months, r.planCategory, others, r.priorPaidCount, r.bcOutright);
+          const { bc, ta, net } = computeRowTotals(amount, paidInst, months, r.planCategory, others, r.priorPaidCount, r.bcOutright, r.taManual ? r.ta : undefined);
           return { ...r, isFree: true, installmentNo: paidInst, monthsCount: months, bc, ta, net };
         }
         return { ...r, isFree: true, installmentNo: 0, monthsCount: 1, bc: 0, ta: 0, net: 0 };
@@ -293,7 +298,7 @@ export default function NewRemittanceForm({
         if (amount > 0 && r.systemInstallmentNo) {
           const months = r.monthlyDue > 0 ? Math.max(1, Math.round(amount / r.monthlyDue)) : 1;
           const others = parseFloat(r.others) || 0;
-          const { bc, ta, net } = computeRowTotals(amount, r.systemInstallmentNo, months, r.planCategory, others, r.priorPaidCount, r.bcOutright);
+          const { bc, ta, net } = computeRowTotals(amount, r.systemInstallmentNo, months, r.planCategory, others, r.priorPaidCount, r.bcOutright, r.taManual ? r.ta : undefined);
           return { ...r, isFree: false, installmentNo: r.systemInstallmentNo, monthsCount: months, bc, ta, net };
         }
         return { ...r, isFree: false, installmentNo: 0, monthsCount: 1, bc: 0, ta: 0, net: 0 };
@@ -306,8 +311,29 @@ export default function NewRemittanceForm({
       if (r.key !== key) return r;
       const amount = getRowAmount(r);
       const others = parseFloat(val) || 0;
-      const { bc, ta, net } = computeRowTotals(amount, r.installmentNo, r.monthsCount, r.planCategory, others, r.priorPaidCount, r.bcOutright);
+      const { bc, ta, net } = computeRowTotals(amount, r.installmentNo, r.monthsCount, r.planCategory, others, r.priorPaidCount, r.bcOutright, r.taManual ? r.ta : undefined);
       return { ...r, others: val, bc, ta, net };
+    }));
+  }
+
+  function handleTaChange(key: string, val: string) {
+    const manualTa = val === "" ? 0 : parseFloat(val) || 0;
+    setRows((prev) => prev.map((r) => {
+      if (r.key !== key) return r;
+      const amount = getRowAmount(r);
+      const others = parseFloat(r.others) || 0;
+      const { bc, ta, net } = computeRowTotals(amount, r.installmentNo, r.monthsCount, r.planCategory, others, r.priorPaidCount, r.bcOutright, manualTa);
+      return { ...r, taManual: true, ta, bc, net };
+    }));
+  }
+
+  function handleTaReset(key: string) {
+    setRows((prev) => prev.map((r) => {
+      if (r.key !== key) return r;
+      const amount = getRowAmount(r);
+      const others = parseFloat(r.others) || 0;
+      const { bc, ta, net } = computeRowTotals(amount, r.installmentNo, r.monthsCount, r.planCategory, others, r.priorPaidCount, r.bcOutright);
+      return { ...r, taManual: false, ta, bc, net };
     }));
   }
 
@@ -602,11 +628,30 @@ export default function NewRemittanceForm({
                       disabled={row.lookupState !== "found"} />
                   </td>
 
-                  {/* TA */}
+                  {/* TA (editable) */}
                   <td className="px-2 py-1.5 text-right">
-                    <span className={`text-xs ${row.ta > 0 ? "text-blue-600 font-medium" : "text-gray-300"}`}>
-                      {row.ta > 0 ? formatCurrency(row.ta) : "—"}
-                    </span>
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        className={`w-16 text-right border rounded px-1 py-0.5 text-xs ${
+                          row.taManual ? "border-amber-400 bg-amber-50 text-amber-700 font-semibold" : "border-gray-200 text-blue-600"
+                        }`}
+                        value={row.ta || ""}
+                        placeholder="0"
+                        onChange={(e) => handleTaChange(row.key, e.target.value)}
+                        disabled={row.lookupState !== "found"}
+                        title={row.taManual ? "Manually adjusted — click reset to restore default" : "Click to override TA amount"}
+                      />
+                      {row.taManual && (
+                        <button
+                          type="button"
+                          onClick={() => handleTaReset(row.key)}
+                          className="text-[9px] text-amber-600 hover:text-amber-800"
+                          title="Reset to default TA"
+                        >↺</button>
+                      )}
+                    </div>
                   </td>
 
                   {/* BC + outright toggle */}
@@ -629,7 +674,7 @@ export default function NewRemittanceForm({
                               if (r.key !== row.key) return r;
                               const amount = getRowAmount(r);
                               const others = parseFloat(r.others) || 0;
-                              const { bc, ta, net } = computeRowTotals(amount, r.installmentNo, r.monthsCount, r.planCategory, others, r.priorPaidCount, checked);
+                              const { bc, ta, net } = computeRowTotals(amount, r.installmentNo, r.monthsCount, r.planCategory, others, r.priorPaidCount, checked, r.taManual ? r.ta : undefined);
                               return { ...r, bcOutright: checked, bc, ta, net };
                             }));
                           }}
