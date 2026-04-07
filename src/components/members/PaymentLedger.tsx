@@ -20,15 +20,19 @@ export default function PaymentLedger({
   payments,
   effectivityDate,
   monthlyDue,
+  memberId,
 }: {
   payments: Payment[];
   effectivityDate: string;
   monthlyDue: number;
+  memberId?: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null); // "year-month" key
+  const [addAmount, setAddAmount] = useState("");
 
   const startDate = new Date(effectivityDate);
   const today = new Date();
@@ -97,6 +101,42 @@ export default function PaymentLedger({
     }
   }
 
+  function startAdd(entry: { year: number; month: number; installmentNo: number }) {
+    setAdding(`${entry.year}-${entry.month}`);
+    setAddAmount(String(monthlyDue));
+  }
+
+  async function addPayment(entry: { year: number; month: number; installmentNo: number }) {
+    if (!memberId) { alert("Member ID missing."); return; }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId,
+          periodMonth: entry.month,
+          periodYear: entry.year,
+          installmentNo: entry.installmentNo,
+          amount: parseFloat(addAmount),
+          paymentDate: new Date(entry.year, entry.month - 1, 15).toISOString(),
+          paymentMethod: "CASH",
+          isFree: false,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Failed");
+      }
+      setAdding(null);
+      router.refresh();
+    } catch (e: any) {
+      alert("Failed to add payment: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
@@ -128,16 +168,22 @@ export default function PaymentLedger({
                   : "bg-gray-50 border-gray-200 text-gray-400";
 
                 const isEditing = e.payment && editing === e.payment.id;
+                const isAdding = !e.payment && adding === `${e.year}-${e.month}`;
+                const clickable = e.status === "paid" || e.status === "free" || (e.status === "unpaid" && memberId);
 
                 return (
                   <div key={`${e.year}-${e.month}`}
                     className={`border rounded-lg p-1.5 text-center transition-all ${colorClass} ${
-                      e.payment ? "cursor-pointer hover:ring-2 hover:ring-blue-400" : "cursor-default"
+                      clickable ? "cursor-pointer hover:ring-2 hover:ring-blue-400" : "cursor-default"
                     }`}
-                    onClick={() => e.payment && !isEditing && startEdit(e.payment)}
+                    onClick={() => {
+                      if (isEditing || isAdding) return;
+                      if (e.payment) startEdit(e.payment);
+                      else if (e.status === "unpaid" && memberId) startAdd(e);
+                    }}
                     title={e.payment
                       ? `Click to edit — Paid ${formatCurrency(Number(e.payment.amount))} on ${new Date(e.payment.paymentDate).toLocaleDateString("en-PH")}`
-                      : e.status}>
+                      : e.status === "unpaid" ? "Click to add payment" : e.status}>
                     <p className="text-xs font-semibold">{MONTHS[e.month - 1]}</p>
                     <p className="text-xs opacity-70">#{e.installmentNo}</p>
                     {isEditing ? (
@@ -159,6 +205,30 @@ export default function PaymentLedger({
                             {saving ? "..." : "Save"}
                           </button>
                           <button onClick={() => setEditing(null)}
+                            className="flex-1 text-[9px] bg-gray-300 text-gray-700 rounded py-0.5 hover:bg-gray-400">
+                            Esc
+                          </button>
+                        </div>
+                      </div>
+                    ) : isAdding ? (
+                      <div className="mt-0.5" onClick={(ev) => ev.stopPropagation()}>
+                        <input
+                          type="number"
+                          className="w-full text-[10px] border border-green-400 rounded px-1 py-0.5 text-center"
+                          value={addAmount}
+                          onChange={(ev) => setAddAmount(ev.target.value)}
+                          onKeyDown={(ev) => {
+                            if (ev.key === "Enter") addPayment(e);
+                            if (ev.key === "Escape") setAdding(null);
+                          }}
+                          autoFocus
+                        />
+                        <div className="flex gap-0.5 mt-0.5">
+                          <button onClick={() => addPayment(e)} disabled={saving}
+                            className="flex-1 text-[9px] bg-green-500 text-white rounded py-0.5 hover:bg-green-600">
+                            {saving ? "..." : "Add"}
+                          </button>
+                          <button onClick={() => setAdding(null)}
                             className="flex-1 text-[9px] bg-gray-300 text-gray-700 rounded py-0.5 hover:bg-gray-400">
                             Esc
                           </button>

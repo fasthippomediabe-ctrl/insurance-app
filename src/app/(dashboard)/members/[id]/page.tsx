@@ -199,6 +199,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         payments={member.payments}
         effectivityDate={(member.effectivityDate ?? member.enrollmentDate).toString()}
         monthlyDue={Number(member.monthlyDue)}
+        memberId={member.id}
       />
     </div>
   );
