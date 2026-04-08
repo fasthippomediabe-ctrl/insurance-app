@@ -124,7 +124,7 @@ const navItems = [
           d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M3 12a9 9 0 1018 0 9 9 0 00-18 0z" />
       </svg>
     ),
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "ACCOUNTING"],
   },
   {
     label: "Payroll",
@@ -249,8 +249,10 @@ export default function Sidebar({ role, pendingEditRequests = 0, open, onClose }
             ? { background: "rgba(201,162,39,0.2)", color: "#c9a227" }
             : role === "HR"
             ? { background: "rgba(168,85,247,0.2)", color: "#a855f7" }
+            : role === "ACCOUNTING"
+            ? { background: "rgba(34,197,94,0.2)", color: "#22c55e" }
             : { background: "rgba(74,156,199,0.2)", color: "#4a9cc7" }}>
-          {role === "ADMIN" ? "Administrator" : role === "HR" ? "Human Resources" : "Branch Staff"}
+          {role === "ADMIN" ? "Administrator" : role === "HR" ? "Human Resources" : role === "ACCOUNTING" ? "Accounting" : "Branch Staff"}
         </span>
       </div>
     </div>

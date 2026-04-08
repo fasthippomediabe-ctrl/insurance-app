@@ -6,7 +6,7 @@ export async function GET() {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((user.role !== "ADMIN" && user.role !== "ACCOUNTING")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const categories = await db.expenseCategory.findMany({
     where: { isActive: true },
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((user.role !== "ADMIN" && user.role !== "ACCOUNTING")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { name, type, description } = await req.json();
   if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });

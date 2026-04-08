@@ -11,7 +11,7 @@ export default async function ReportPage({
 }) {
   const session = await auth();
   const user = session!.user as any;
-  if (user.role !== "ADMIN") redirect("/dashboard");
+  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING") redirect("/dashboard");
 
   const now = new Date();
   const month = parseInt(searchParams.month ?? "") || now.getMonth() + 1;

@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((user.role !== "ADMIN" && user.role !== "ACCOUNTING")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const month = parseInt(searchParams.get("month") ?? "") || undefined;
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((user.role !== "ADMIN" && user.role !== "ACCOUNTING")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const data = await req.json();
   const { categoryId, branchId, amount, expenseDate, description, vendor, paymentMethod, receiptNo, receiptPhoto, notes } = data;
@@ -72,7 +72,7 @@ export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((user.role !== "ADMIN" && user.role !== "ACCOUNTING")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");

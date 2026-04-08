@@ -7,7 +7,7 @@ import Link from "next/link";
 export default async function AccountingPage() {
   const session = await auth();
   const user = session!.user as any;
-  if (user.role !== "ADMIN") redirect("/dashboard");
+  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING") redirect("/dashboard");
 
   const now = new Date();
   const month = now.getMonth() + 1;

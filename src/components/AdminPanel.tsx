@@ -107,6 +107,7 @@ export default function AdminPanel({ branches, users, agents, collectors }: {
                     <option value="ADMIN">Admin</option>
                     <option value="BRANCH_STAFF">Branch Staff</option>
                     <option value="HR">HR</option>
+                    <option value="ACCOUNTING">Accounting</option>
                   </select>
                 </div>
                 {form.role === "BRANCH_STAFF" && (

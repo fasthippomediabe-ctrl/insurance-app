@@ -48,6 +48,7 @@ enum UserRole {
   ADMIN
   BRANCH_STAFF
   HR
+  ACCOUNTING
 }
 
 // ─────────────────────────────────────────────
