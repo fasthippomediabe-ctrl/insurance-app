@@ -8,7 +8,7 @@ const SALARIED_POSITIONS = ["BM", "BS", "RM", "TH", "CEO", "CHR"];
 export default async function LoansPage() {
   const session = await auth();
   const user = session!.user as any;
-  if (user.role !== "ADMIN" && user.role !== "HR") redirect("/dashboard");
+  if (user.role !== "ADMIN" && user.role !== "HR" && user.role !== "ACCOUNTING") redirect("/dashboard");
 
   const [loans, employees] = await Promise.all([
     db.loan.findMany({

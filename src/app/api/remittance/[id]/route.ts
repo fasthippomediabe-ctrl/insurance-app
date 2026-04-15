@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   const user = session?.user as any;
-  if (!user || user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Only admins can delete remittances." }, { status: 403 });
+  if (!user || (user.role !== "ADMIN" && user.role !== "ACCOUNTING")) {
+    return NextResponse.json({ error: "Only admins/accounting can delete remittances." }, { status: 403 });
   }
 
   const remittance = await db.remittance.findUnique({

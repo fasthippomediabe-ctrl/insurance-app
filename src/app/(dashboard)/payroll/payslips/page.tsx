@@ -6,7 +6,7 @@ import PayslipManager from "@/components/payroll/PayslipManager";
 export default async function PayslipsPage() {
   const session = await auth();
   const user = session!.user as any;
-  if (user.role !== "ADMIN" && user.role !== "HR") redirect("/dashboard");
+  if (user.role !== "ADMIN" && user.role !== "HR" && user.role !== "ACCOUNTING") redirect("/dashboard");
 
   const payslips = await db.payslip.findMany({
     include: {

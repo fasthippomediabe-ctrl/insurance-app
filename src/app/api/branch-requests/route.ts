@@ -69,29 +69,63 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(request, { status: 201 });
 }
 
-// PATCH: Approve/reject/release (admin or accounting)
+// PATCH: Approve/reject/release OR edit fields
+// - Admin/Accounting: can change status + edit all fields
+// - Branch Staff: can edit their own PENDING requests (no status change)
 export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
 
-  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING") {
-    return NextResponse.json({ error: "Admin or Accounting only" }, { status: 403 });
+  const data = await req.json();
+  const { id, status, reviewNote, title, description, amount, type, dueDate, vendor, attachments } = data;
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const existing = await db.branchRequest.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Permission check
+  const isAdmin = user.role === "ADMIN" || user.role === "ACCOUNTING";
+  const isOwner = user.role === "BRANCH_STAFF" && existing.requestedBy === user.id && existing.branchId === user.branchId;
+
+  if (!isAdmin && !isOwner) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id, status, reviewNote } = await req.json();
-  if (!id || !status) return NextResponse.json({ error: "id and status required" }, { status: 400 });
+  // Branch staff can only edit pending requests, no status changes
+  if (isOwner && !isAdmin) {
+    if (existing.status !== "PENDING") {
+      return NextResponse.json({ error: "Only pending requests can be edited" }, { status: 400 });
+    }
+    if (status) {
+      return NextResponse.json({ error: "Branch staff cannot change status" }, { status: 403 });
+    }
+  }
 
   const now = new Date();
-  const updateData: any = { status, reviewNote: reviewNote || null };
+  const updateData: any = {};
 
-  if (status === "APPROVED" || status === "REJECTED") {
-    updateData.reviewedBy = user.id;
-    updateData.reviewedAt = now;
-  }
-  if (status === "RELEASED") {
-    updateData.releasedBy = user.id;
-    updateData.releasedAt = now;
+  // Editable fields
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+  if (amount !== undefined) updateData.amount = amount;
+  if (type !== undefined) updateData.type = type;
+  if (vendor !== undefined) updateData.vendor = vendor || null;
+  if (attachments !== undefined) updateData.attachments = attachments || null;
+  if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
+
+  // Status changes (admin/accounting only)
+  if (status) {
+    updateData.status = status;
+    if (reviewNote !== undefined) updateData.reviewNote = reviewNote || null;
+    if (status === "APPROVED" || status === "REJECTED") {
+      updateData.reviewedBy = user.id;
+      updateData.reviewedAt = now;
+    }
+    if (status === "RELEASED") {
+      updateData.releasedBy = user.id;
+      updateData.releasedAt = now;
+    }
   }
 
   const request = await db.branchRequest.update({ where: { id }, data: updateData });

@@ -9,7 +9,7 @@ const SALARIED_POSITIONS = ["BM", "BS", "RM", "TH", "CEO", "CHR"];
 export default async function PayrollPage() {
   const session = await auth();
   const user = session!.user as any;
-  if (user.role !== "ADMIN" && user.role !== "HR") redirect("/dashboard");
+  if (user.role !== "ADMIN" && user.role !== "HR" && user.role !== "ACCOUNTING") redirect("/dashboard");
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;

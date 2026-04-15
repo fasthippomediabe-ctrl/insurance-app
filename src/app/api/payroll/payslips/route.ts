@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN" && user.role !== "HR") {
+  if (user.role !== "ADMIN" && user.role !== "HR" && user.role !== "ACCOUNTING") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN" && user.role !== "HR") {
+  if (user.role !== "ADMIN" && user.role !== "HR" && user.role !== "ACCOUNTING") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -201,7 +201,7 @@ export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN" && user.role !== "HR") {
+  if (user.role !== "ADMIN" && user.role !== "HR" && user.role !== "ACCOUNTING") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

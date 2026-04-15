@@ -68,6 +68,32 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(expense, { status: 201 });
 }
 
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = session.user as any;
+  if ((user.role !== "ADMIN" && user.role !== "ACCOUNTING")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const data = await req.json();
+  const { id, categoryId, branchId, amount, expenseDate, description, vendor, paymentMethod, receiptNo, receiptPhoto, notes } = data;
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const updateData: any = {};
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
+  if (branchId !== undefined) updateData.branchId = branchId || null;
+  if (amount !== undefined) updateData.amount = amount;
+  if (expenseDate !== undefined) updateData.expenseDate = new Date(expenseDate);
+  if (description !== undefined) updateData.description = description;
+  if (vendor !== undefined) updateData.vendor = vendor || null;
+  if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod || null;
+  if (receiptNo !== undefined) updateData.receiptNo = receiptNo || null;
+  if (receiptPhoto !== undefined) updateData.receiptPhoto = receiptPhoto || null;
+  if (notes !== undefined) updateData.notes = notes || null;
+
+  const expense = await db.expense.update({ where: { id }, data: updateData });
+  return NextResponse.json(expense);
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

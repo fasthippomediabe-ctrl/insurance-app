@@ -12,7 +12,7 @@ export default async function RmIncentivesPage({
   const session = await auth();
   const user = session!.user as any;
 
-  if (user.role !== "ADMIN") {
+  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING") {
     return <div className="p-8 text-center text-gray-400">Admin access required.</div>;
   }
 
