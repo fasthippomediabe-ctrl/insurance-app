@@ -29,7 +29,7 @@ export default async function EmployeesPage({
   const user = session!.user as any;
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") {
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) {
     where.branchId = user.branchId;
     where.primaryPosition = { in: BRANCH_POSITIONS };
   }

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status") || undefined;
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
   if (status) where.status = status;
 
   const requests = await db.branchRequest.findMany({
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "type, title, description, amount required" }, { status: 400 });
   }
 
-  const branch = user.role === "BRANCH_STAFF" ? user.branchId : (branchId || user.branchId);
+  const branch = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? user.branchId : (branchId || user.branchId);
   if (!branch) return NextResponse.json({ error: "Branch is required" }, { status: 400 });
 
   const count = await db.branchRequest.count();
@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest) {
 
   // Permission check
   const isAdmin = user.role === "ADMIN" || user.role === "ACCOUNTING";
-  const isOwner = user.role === "BRANCH_STAFF" && existing.requestedBy === user.id && existing.branchId === user.branchId;
+  const isOwner = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") && existing.requestedBy === user.id && existing.branchId === user.branchId;
 
   if (!isAdmin && !isOwner) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -145,7 +145,7 @@ export async function DELETE(req: NextRequest) {
   const existing = await db.branchRequest.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (user.role === "BRANCH_STAFF") {
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) {
     if (existing.requestedBy !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

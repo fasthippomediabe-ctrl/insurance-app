@@ -108,9 +108,11 @@ export default function AdminPanel({ branches, users, agents, collectors }: {
                     <option value="BRANCH_STAFF">Branch Staff</option>
                     <option value="HR">HR</option>
                     <option value="ACCOUNTING">Accounting</option>
+                    <option value="COLLECTION_HEAD">Collection Head</option>
+                    <option value="COLLECTION_SUPERVISOR">Collection Supervisor</option>
                   </select>
                 </div>
-                {form.role === "BRANCH_STAFF" && (
+                {(form.role === "BRANCH_STAFF" || form.role === "COLLECTION_SUPERVISOR") && (
                   <div>
                     <label className="label">Branch *</label>
                     <select className="input" value={form.branchId ?? ""} onChange={(e) => setF("branchId", e.target.value)}>

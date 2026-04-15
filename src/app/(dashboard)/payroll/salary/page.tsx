@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import SalaryManager from "@/components/payroll/SalaryManager";
 
-const SALARIED_POSITIONS = ["BM", "BS", "RM", "TH", "CEO", "CHR"];
+const SALARIED_POSITIONS = ["AS", "BM", "BS", "RM", "TH", "CEO", "CHR"];
 
 export default async function SalaryPage() {
   const session = await auth();

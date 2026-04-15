@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import LoanManager from "@/components/payroll/LoanManager";
 
-const SALARIED_POSITIONS = ["BM", "BS", "RM", "TH", "CEO", "CHR"];
+const SALARIED_POSITIONS = ["AS", "BM", "BS", "RM", "TH", "CEO", "CHR"];
 
 export default async function LoansPage() {
   const session = await auth();

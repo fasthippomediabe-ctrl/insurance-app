@@ -16,7 +16,7 @@ export default async function DashboardPage({
   const currentMonth = parseInt(searchParams.month ?? "") || (now.getMonth() + 1);
   const currentYear = parseInt(searchParams.year ?? "") || now.getFullYear();
 
-  const branchFilter = user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {};
+  const branchFilter = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {};
   const memberBranchFilter = branchFilter.branchId ? { member: { branchId: branchFilter.branchId } } : {};
 
   // ── Core stats ──

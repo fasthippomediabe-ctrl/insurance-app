@@ -14,7 +14,7 @@ export default async function EditMemberPage({ params }: { params: { id: string 
 
   if (!member) notFound();
 
-  const branchFilter = user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {};
+  const branchFilter = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {};
 
   const [branches, agents, collectors] = await Promise.all([
     db.branch.findMany({ orderBy: { name: "asc" } }),

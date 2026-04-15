@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { formatCurrency, MONTHS } from "@/lib/utils";
 import Link from "next/link";
 
-const SALARIED_POSITIONS = ["BM", "BS", "RM", "TH", "CEO", "CHR"];
+const SALARIED_POSITIONS = ["AS", "BM", "BS", "RM", "TH", "CEO", "CHR"];
 
 export default async function PayrollPage() {
   const session = await auth();

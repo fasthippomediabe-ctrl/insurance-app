@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   const collectorId = searchParams.get("collectorId");
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") where.branchId = user.branchId;
   if (status) where.status = status;
   if (branchId && user.role === "ADMIN") where.branchId = branchId;
   if (collectorId) where.collectorId = collectorId;

@@ -24,7 +24,7 @@ export default async function ClaimsPage() {
   const user = session!.user as any;
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
 
   const claims = await db.claim.findMany({
     where,

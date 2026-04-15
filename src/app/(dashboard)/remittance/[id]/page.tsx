@@ -32,7 +32,7 @@ export default async function RemittanceDetailPage({ params }: { params: { id: s
       where: {
         isActive: true,
         primaryPosition: "AO",
-        ...(user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {}),
+        ...((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {}),
       },
       select: { id: true, firstName: true, lastName: true, employeeNo: true },
       orderBy: { lastName: "asc" },

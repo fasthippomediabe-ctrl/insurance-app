@@ -9,7 +9,7 @@ export default async function BranchRequestsPage() {
   const user = session!.user as any;
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
 
   const [requests, branches] = await Promise.all([
     db.branchRequest.findMany({
@@ -33,7 +33,7 @@ export default async function BranchRequestsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Branch Requests</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {user.role === "BRANCH_STAFF" ? "Your branch requests" : "All branch requests"} · {requests.length} total
+            {(user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? "Your branch requests" : "All branch requests"} · {requests.length} total
           </p>
         </div>
         <div className="flex gap-2">

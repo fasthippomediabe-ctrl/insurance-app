@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status") || undefined;
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
   if (status) where.status = status;
 
   const claims = await db.claim.findMany({

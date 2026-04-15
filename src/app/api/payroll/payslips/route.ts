@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-const SALARIED_POSITIONS = ["BM", "BS", "RM", "TH", "CEO", "CHR"];
+const SALARIED_POSITIONS = ["AS", "BM", "BS", "RM", "TH", "CEO", "CHR"];
 
 // GET: List payslips with filters
 export async function GET(req: NextRequest) {

@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const branchId = searchParams.get("branchId");
 
   const where: any = { isActive: true };
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
   if (position) where.primaryPosition = position as EmployeePosition;
   if (branchId && (user.role === "ADMIN" || user.role === "HR")) where.branchId = branchId;
 

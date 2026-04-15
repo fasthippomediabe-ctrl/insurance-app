@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   const where: any = {};
   if (memberId) where.memberId = memberId;
   if (collectorId) where.collectorId = collectorId;
-  if (user.role === "BRANCH_STAFF") where.member = { branchId: user.branchId };
+  if (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") where.member = { branchId: user.branchId };
 
   const payments = await db.payment.findMany({
     where,

@@ -207,6 +207,7 @@ export const PLAN_CATEGORY_LABELS: Record<PlanCategory, string> = {
 export const POSITION_LABELS: Record<EmployeePosition, string> = {
   MO:  "MO – Marketing Officer / Sales Agent",
   AO:  "AO – Account Officer / Collector",
+  AS:  "AS – Account Supervisor (Salaried Agent/Collector)",
   MH:  "MH – Marketing Head",
   AM:  "AM – Area Manager",
   CS:  "CS – Collection Supervisor",
@@ -220,7 +221,7 @@ export const POSITION_LABELS: Record<EmployeePosition, string> = {
 };
 
 export const COMMISSION_POSITIONS: EmployeePosition[] = ["MO", "AO", "MH", "AM", "CS"];
-export const SALARIED_POSITIONS: EmployeePosition[] = ["BS", "BM", "RM", "TH", "EVP", "CEO", "CHR"];
+export const SALARIED_POSITIONS: EmployeePosition[] = ["AS", "BS", "BM", "RM", "TH", "EVP", "CEO", "CHR"];
 
 // Production points per plan (commissionable accounts only)
 export const PRODUCTION_POINTS: Record<PlanCategory, number> = {

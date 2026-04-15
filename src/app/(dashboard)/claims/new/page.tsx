@@ -6,7 +6,7 @@ export default async function NewClaimPage() {
   const session = await auth();
   const user = session!.user as any;
 
-  const branchFilter = user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {};
+  const branchFilter = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {};
 
   const members = await db.member.findMany({
     where: {

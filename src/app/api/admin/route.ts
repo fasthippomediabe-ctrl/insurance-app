@@ -8,7 +8,7 @@ const BranchSchema = z.object({ name: z.string().min(1), address: z.string().opt
 const UserSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(6),
-  role: z.enum(["ADMIN", "BRANCH_STAFF", "HR", "ACCOUNTING"]),
+  role: z.enum(["ADMIN", "BRANCH_STAFF", "HR", "ACCOUNTING", "COLLECTION_HEAD", "COLLECTION_SUPERVISOR"]),
   branchId: z.string().optional(),
 });
 

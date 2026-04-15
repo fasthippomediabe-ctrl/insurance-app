@@ -12,7 +12,7 @@ export default async function NewEmployeePage() {
       where: {
         isActive: true,
         primaryPosition: { in: ["MH", "AM", "BM", "RM", "TH", "EVP", "CEO", "CHR"] },
-        ...(user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {}),
+        ...((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {}),
       },
       orderBy: { lastName: "asc" },
     }),

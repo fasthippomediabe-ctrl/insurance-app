@@ -12,7 +12,7 @@ export default async function NewPaymentPage({
 
   const [members, collectors] = await Promise.all([
     db.member.findMany({
-      where: user.role === "BRANCH_STAFF" ? { branchId: user.branchId, status: { in: ["ACTIVE", "REINSTATED"] } } : { status: { in: ["ACTIVE", "REINSTATED"] } },
+      where: (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId, status: { in: ["ACTIVE", "REINSTATED"] } } : { status: { in: ["ACTIVE", "REINSTATED"] } },
       select: { id: true, mafNo: true, firstName: true, lastName: true, monthlyDue: true, mopCode: true, effectivityDate: true, enrollmentDate: true },
       orderBy: { mafNo: "asc" },
     }),
@@ -20,7 +20,7 @@ export default async function NewPaymentPage({
       where: {
         isActive: true,
         primaryPosition: "AO",
-        ...(user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {}),
+        ...((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {}),
       },
       select: { id: true, firstName: true, lastName: true, employeeNo: true },
       orderBy: { lastName: "asc" },

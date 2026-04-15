@@ -8,7 +8,7 @@ import { POSITION_LABELS, COMMISSION_POSITIONS, SALARIED_POSITIONS } from "@/lib
 // Positions only Admin can assign
 const ADMIN_ONLY_POSITIONS: EmployeePosition[] = ["RM", "TH", "EVP", "CEO", "CHR"];
 // Positions branch staff can add
-const BRANCH_POSITIONS: EmployeePosition[] = ["MO", "AO", "MH", "AM", "CS", "BS", "BM"];
+const BRANCH_POSITIONS: EmployeePosition[] = ["MO", "AO", "AS", "MH", "AM", "CS", "BS", "BM"];
 
 // Commission positions that can be held simultaneously
 // (field staff who also have leadership roles)

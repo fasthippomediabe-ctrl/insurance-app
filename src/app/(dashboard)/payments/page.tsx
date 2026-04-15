@@ -22,7 +22,7 @@ export default async function PaymentsPage({
 
   const isAdmin = user.role === "ADMIN";
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.member = { branchId: user.branchId };
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.member = { branchId: user.branchId };
   if (month) where.periodMonth = month;
   if (year) where.periodYear = year;
   if (searchParams.collector) where.collectorId = searchParams.collector;
@@ -40,7 +40,7 @@ export default async function PaymentsPage({
       where: {
         isActive: true,
         primaryPosition: "AO",
-        ...(user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {}),
+        ...((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {}),
       },
       select: { id: true, firstName: true, lastName: true },
       orderBy: { lastName: "asc" },

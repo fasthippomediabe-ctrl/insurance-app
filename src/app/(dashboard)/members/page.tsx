@@ -16,7 +16,7 @@ export default async function MembersPage({
   const pageSize = 30;
 
   const where: any = {};
-  if (user.role === "BRANCH_STAFF") where.branchId = user.branchId;
+  if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
   if (searchParams.status) where.status = searchParams.status as MemberStatus;
   if (searchParams.branch && user.role === "ADMIN") where.branchId = searchParams.branch;
   if (searchParams.search) {

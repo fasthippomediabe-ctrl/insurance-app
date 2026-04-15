@@ -49,6 +49,8 @@ enum UserRole {
   BRANCH_STAFF
   HR
   ACCOUNTING
+  COLLECTION_HEAD         // all branches - ACR, members, payments, collectors, incentives
+  COLLECTION_SUPERVISOR   // own branch only - same modules
 }
 
 // ─────────────────────────────────────────────
@@ -138,6 +140,7 @@ model PromotionHistory {
 enum EmployeePosition {
   MO   // Marketing Officer / Sales Agent
   AO   // Account Officer / Collector
+  AS   // Account Supervisor (salaried agent/collector)
   MH   // Marketing Head
   AM   // Area Manager
   CS   // Collection Supervisor

@@ -6,7 +6,7 @@ export default async function NewMemberPage() {
   const session = await auth();
   const user = session!.user as any;
 
-  const branchFilter = user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {};
+  const branchFilter = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {};
 
   const [branches, agentRows, collectorRows] = await Promise.all([
     db.branch.findMany({ orderBy: { name: "asc" } }),

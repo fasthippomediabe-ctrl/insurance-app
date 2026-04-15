@@ -116,7 +116,7 @@ export default async function AcrPage({
     where: {
       id: { in: collectorIdList },
       isActive: true,
-      ...(user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {}),
+      ...((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {}),
     },
     select: { id: true, firstName: true, lastName: true, employeeNo: true, branch: { select: { name: true } } },
     orderBy: { lastName: "asc" },

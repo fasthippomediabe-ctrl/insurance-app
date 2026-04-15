@@ -20,7 +20,7 @@ export default async function CollectorsPage({
     where: {
       isActive: true,
       primaryPosition: "AO",
-      ...(user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {}),
+      ...((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {}),
     },
     include: {
       collectorMembers: {

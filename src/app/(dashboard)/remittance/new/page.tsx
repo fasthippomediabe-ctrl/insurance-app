@@ -6,7 +6,7 @@ export default async function NewRemittancePage() {
   const session = await auth();
   const user = session!.user as any;
 
-  const branchFilter = user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {};
+  const branchFilter = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {};
 
   // Auto-generate next remittance number for today
   const now = new Date();

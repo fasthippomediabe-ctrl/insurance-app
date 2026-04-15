@@ -8,7 +8,7 @@ export default async function RemittancePage() {
   const user = session!.user as any;
 
   const remittances = await db.remittance.findMany({
-    where: user.role === "BRANCH_STAFF" ? { branchId: user.branchId } : {},
+    where: (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? { branchId: user.branchId } : {},
     include: {
       collector: { select: { firstName: true, lastName: true, employeeNo: true } },
       branch: { select: { name: true } },
