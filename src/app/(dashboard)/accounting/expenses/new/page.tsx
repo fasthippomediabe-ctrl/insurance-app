@@ -6,7 +6,7 @@ import NewExpenseForm from "@/components/accounting/NewExpenseForm";
 export default async function NewExpensePage() {
   const session = await auth();
   const user = session!.user as any;
-  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING") redirect("/dashboard");
+  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING" && user.role !== "HR") redirect("/dashboard");
 
   const [categories, branches] = await Promise.all([
     db.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),

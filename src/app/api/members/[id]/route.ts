@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN" && user.role !== "ACCOUNTING") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN") return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   await db.$transaction([
     db.payment.deleteMany({ where: { memberId: params.id } }),
