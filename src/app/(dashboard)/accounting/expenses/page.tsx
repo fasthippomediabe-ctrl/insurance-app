@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatCurrency, MONTHS } from "@/lib/utils";
 import Link from "next/link";
+import ExpensesTable from "@/components/accounting/ExpensesTable";
 
 export default async function ExpensesPage({
   searchParams,
@@ -19,14 +20,15 @@ export default async function ExpensesPage({
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 1);
 
-  const expenses = await db.expense.findMany({
-    where: { status: "POSTED", expenseDate: { gte: start, lt: end } },
-    include: { category: true },
-    orderBy: { expenseDate: "desc" },
-  });
-
-  const branches = await db.branch.findMany({ select: { id: true, name: true } });
-  const branchMap = new Map(branches.map((b) => [b.id, b.name]));
+  const [expenses, branches, categories] = await Promise.all([
+    db.expense.findMany({
+      where: { status: "POSTED", expenseDate: { gte: start, lt: end } },
+      include: { category: true },
+      orderBy: { expenseDate: "desc" },
+    }),
+    db.branch.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+  ]);
 
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
 
@@ -61,47 +63,26 @@ export default async function ExpensesPage({
         <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">View</button>
       </form>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <tr>
-                <th className="px-4 py-2.5 text-left">Date</th>
-                <th className="px-4 py-2.5 text-left">Expense No</th>
-                <th className="px-4 py-2.5 text-left">Category</th>
-                <th className="px-4 py-2.5 text-left">Branch</th>
-                <th className="px-4 py-2.5 text-left">Description</th>
-                <th className="px-4 py-2.5 text-left">Vendor</th>
-                <th className="px-4 py-2.5 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {expenses.map((e) => (
-                <tr key={e.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(e.expenseDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">{e.expenseNo}</td>
-                  <td className="px-4 py-3"><span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">{e.category.name}</span></td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{e.branchId ? branchMap.get(e.branchId) ?? "—" : "Head Office"}</td>
-                  <td className="px-4 py-3 text-gray-700">{e.description}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{e.vendor ?? "—"}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-red-600">{formatCurrency(Number(e.amount))}</td>
-                </tr>
-              ))}
-              {expenses.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No expenses for this period.</td></tr>
-              )}
-            </tbody>
-            {expenses.length > 0 && (
-              <tfoot className="bg-gray-50 font-bold">
-                <tr>
-                  <td colSpan={6} className="px-4 py-3 text-right">TOTAL</td>
-                  <td className="px-4 py-3 text-right text-red-600">{formatCurrency(total)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
+      <ExpensesTable
+        expenses={expenses.map((e) => ({
+          id: e.id,
+          expenseNo: e.expenseNo,
+          categoryId: e.categoryId,
+          categoryName: e.category.name,
+          branchId: e.branchId,
+          amount: Number(e.amount),
+          expenseDate: e.expenseDate.toISOString(),
+          description: e.description,
+          vendor: e.vendor,
+          paymentMethod: e.paymentMethod,
+          receiptNo: e.receiptNo,
+          receiptPhoto: e.receiptPhoto,
+          notes: e.notes,
+        }))}
+        branches={branches}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        total={total}
+      />
     </div>
   );
 }
