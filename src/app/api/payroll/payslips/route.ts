@@ -91,36 +91,59 @@ export async function POST(req: NextRequest) {
     });
     if (existing) continue;
 
-    const basicPay = Number(profile.basicSalary) / 2; // Half month
+    const payType = (profile as any).payType || "MONTHLY";
     const allowances = Number(profile.riceAllowance) + Number(profile.transpoAllowance) + Number(profile.otherAllowance);
     const halfAllowances = allowances / 2;
 
-    // Get overrides for this employee (attendance + extras)
+    // Pull attendance for the cutoff
+    const attendance = await db.attendanceRecord.findMany({
+      where: {
+        employeeId: profile.employeeId,
+        date: { gte: periodStart, lt: new Date(periodEnd.getTime() + 86400000) },
+      },
+    });
+
+    const attendanceDaysWorked = attendance.filter((a) => !a.isAbsent && !a.isHoliday).reduce((s, a) => s + (a.isHalfDay ? 0.5 : 1), 0);
+    const attendanceDaysAbsent = attendance.filter((a) => a.isAbsent).length;
+    const attendanceLateMins = attendance.reduce((s, a) => s + (a.lateMinutes || 0), 0);
+
+    // Get overrides for this employee (attendance + extras) — overrides take precedence
     const ov = overrides?.[profile.employeeId] ?? {};
     const overtime = ov.overtime ?? 0;
     const holidayPay = ov.holidayPay ?? 0;
     const otherEarnings = ov.otherEarnings ?? 0;
     const otherDeductions = ov.otherDeductions ?? 0;
 
-    // Attendance
-    const daysWorked = ov.daysWorked ?? (half === 1 ? 11 : 11); // default ~11 working days per half
-    const daysAbsent = ov.daysAbsent ?? 0;
-    const rawLateMins = ov.lateMins ?? 0; // total raw late minutes for the period
+    // Attendance values — use override if provided, else attendance records, else defaults
+    const daysWorked = ov.daysWorked ?? (attendance.length > 0 ? attendanceDaysWorked : (half === 1 ? 11 : 11));
+    const daysAbsent = ov.daysAbsent ?? (attendance.length > 0 ? attendanceDaysAbsent : 0);
+    const rawLateMins = ov.lateMins ?? attendanceLateMins;
 
-    // Late deduction: first 30 mins (grace) per day is free, remaining charged per hour
+    // Late deduction: first grace mins per period is free, remaining charged per hour
     const graceMins = Number(profile.lateGraceMins) || 30;
     const lateRatePerHour = Number(profile.lateRatePerHour) || 0;
-    // Apply grace: subtract grace from total late (minimum 0)
     const chargeableMins = Math.max(0, rawLateMins - graceMins);
     const lateHours = chargeableMins / 60;
     const lateDeduction = Math.round(lateHours * lateRatePerHour * 100) / 100;
 
-    // Absence deduction
-    const dailyRate = Number(profile.dailyRate) > 0
-      ? Number(profile.dailyRate)
-      : Number(profile.basicSalary) / 22; // 22 working days per month
-    const absenceDeduction = Math.round(daysAbsent * dailyRate * 100) / 100;
-    const absences = absenceDeduction;
+    // Compute basic pay based on payType
+    let basicPay: number;
+    let absences: number;
+    if (payType === "DAILY") {
+      // DAILY: basic pay = daysWorked × dailyRate
+      const dailyRate = Number(profile.dailyRate) > 0
+        ? Number(profile.dailyRate)
+        : Number(profile.basicSalary) / 22;
+      basicPay = Math.round(daysWorked * dailyRate * 100) / 100;
+      absences = 0; // no separate absence deduction — already not paid for absent days
+    } else {
+      // MONTHLY: fixed basic pay (half month), deduct for absences
+      basicPay = Number(profile.basicSalary) / 2;
+      const dailyRate = Number(profile.dailyRate) > 0
+        ? Number(profile.dailyRate)
+        : Number(profile.basicSalary) / 22;
+      absences = Math.round(daysAbsent * dailyRate * 100) / 100;
+    }
 
     const grossPay = basicPay + halfAllowances + overtime + holidayPay + otherEarnings;
 

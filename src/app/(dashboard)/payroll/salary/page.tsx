@@ -41,6 +41,8 @@ export default async function SalaryPage() {
         lateGraceMins: p.lateGraceMins,
         lateRatePerHour: Number(p.lateRatePerHour),
         dailyRate: Number(p.dailyRate),
+        payType: (p as any).payType ?? "MONTHLY",
+        hoursPerDay: (p as any).hoursPerDay ?? 8,
         employee: { ...p.employee, branch: p.employee.branch?.name ?? "" },
       }))}
     />

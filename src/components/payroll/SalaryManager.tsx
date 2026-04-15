@@ -15,6 +15,7 @@ interface Profile {
   pagibigNo: string | null; tinNo: string | null; sssContribution: number; philhealthContribution: number;
   pagibigContribution: number; withholdingTax: number;
   lateGraceMins: number; lateRatePerHour: number; dailyRate: number;
+  payType: string; hoursPerDay: number;
   employee: Employee;
 }
 
@@ -48,12 +49,15 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
       lateGraceMins: existing.lateGraceMins,
       lateRatePerHour: existing.lateRatePerHour,
       dailyRate: existing.dailyRate,
+      payType: existing.payType ?? "MONTHLY",
+      hoursPerDay: existing.hoursPerDay ?? 8,
     } : {
       employeeId: empId,
       basicSalary: 0, riceAllowance: 0, transpoAllowance: 0, otherAllowance: 0,
       paySchedule: "REGULAR", sssNo: "", philhealthNo: "", pagibigNo: "", tinNo: "",
       sssContribution: 0, philhealthContribution: 0, pagibigContribution: 0, withholdingTax: 0,
       lateGraceMins: 30, lateRatePerHour: 0, dailyRate: 0,
+      payType: "MONTHLY", hoursPerDay: 8,
     });
     setEditing(empId);
     setMsg("");
@@ -141,13 +145,28 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
                     value={form.otherAllowance} onChange={(e) => setForm({ ...form, otherAllowance: parseFloat(e.target.value) || 0 })} />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Pay Schedule</label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  value={form.paySchedule} onChange={(e) => setForm({ ...form, paySchedule: e.target.value })}>
-                  <option value="REGULAR">Regular (5th & 20th)</option>
-                  <option value="EXECUTIVE">Executive (15th & End of Month)</option>
-                </select>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Pay Type</label>
+                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    value={form.payType} onChange={(e) => setForm({ ...form, payType: e.target.value })}>
+                    <option value="MONTHLY">Monthly (fixed salary)</option>
+                    <option value="DAILY">Daily (paid per day worked)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Pay Schedule</label>
+                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    value={form.paySchedule} onChange={(e) => setForm({ ...form, paySchedule: e.target.value })}>
+                    <option value="REGULAR">Regular (5th & 20th)</option>
+                    <option value="EXECUTIVE">Executive (15th & EOM)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Hours / Day</label>
+                  <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    value={form.hoursPerDay} onChange={(e) => setForm({ ...form, hoursPerDay: parseInt(e.target.value) || 8 })} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

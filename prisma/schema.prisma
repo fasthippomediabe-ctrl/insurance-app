@@ -103,6 +103,7 @@ model Employee {
   payslips         Payslip[]
   loans            Loan[]
   thirteenthMonth  ThirteenthMonth[]
+  attendance       AttendanceRecord[]
 
   @@index([primaryPosition])
   @@index([branchId])
@@ -614,8 +615,40 @@ model SalaryProfile {
   lateGraceMins   Int      @default(30)  // Grace period in minutes (no charge)
   lateRatePerHour Decimal  @db.Decimal(10, 2) @default(0) // Deduction per hour of late
   dailyRate       Decimal  @db.Decimal(10, 2) @default(0) // Deduction per day of absence (0 = auto from basic/22)
+  payType         PayType  @default(MONTHLY) // MONTHLY or DAILY
+  hoursPerDay     Int      @default(8)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+enum PayType {
+  MONTHLY   // Fixed monthly salary
+  DAILY     // Paid per day worked
+}
+
+// ─────────────────────────────────────────────
+// ATTENDANCE (biometric)
+// ─────────────────────────────────────────────
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  date        DateTime // the workday date (no time component)
+  timeIn      String?  // "08:00"
+  timeOut     String?  // "17:00"
+  hoursWorked Decimal  @db.Decimal(5, 2) @default(0)
+  lateMinutes Int      @default(0)
+  isAbsent    Boolean  @default(false)
+  isHalfDay   Boolean  @default(false)
+  isHoliday   Boolean  @default(false)
+  source      String   @default("MANUAL") // MANUAL, BIOMETRIC_IMPORT
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
 }
 
 enum PaySchedule {

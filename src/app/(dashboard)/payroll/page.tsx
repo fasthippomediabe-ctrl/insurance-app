@@ -46,6 +46,10 @@ export default async function PayrollPage() {
             className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
             Generate Payslips
           </Link>
+          <Link href="/payroll/attendance"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            Attendance
+          </Link>
           <Link href="/payroll/loans"
             className="bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold px-4 py-2 rounded-lg">
             Loans
