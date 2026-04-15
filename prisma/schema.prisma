@@ -793,3 +793,45 @@ enum ExpenseStatus {
   POSTED
   VOID
 }
+
+// ─────────────────────────────────────────────
+// BRANCH REQUESTS (payment/expense/liability requests from branch to HO)
+// ─────────────────────────────────────────────
+model BranchRequest {
+  id           String              @id @default(cuid())
+  requestNo    String              @unique
+  type         BranchRequestType
+  branchId     String
+  requestedBy  String              // user id
+  title        String
+  description  String              @db.Text
+  amount       Decimal             @db.Decimal(12, 2)
+  dueDate      DateTime?
+  vendor       String?
+  attachments  String?             @db.Text // base64 image (optional receipt/quotation)
+  status       BranchRequestStatus @default(PENDING)
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+  releasedAt   DateTime?
+  releasedBy   String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([branchId])
+  @@index([status])
+  @@index([requestedBy])
+}
+
+enum BranchRequestType {
+  PAYMENT      // payment request (e.g., vendor payment)
+  EXPENSE      // expense reimbursement
+  LIABILITY    // liability / debt to be settled
+}
+
+enum BranchRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RELEASED     // money/funds released to branch
+}
