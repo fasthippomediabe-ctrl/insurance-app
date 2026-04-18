@@ -24,7 +24,7 @@ export default async function ReportPage({
   const expenseBranchFilter = branchId ? { branchId } : {};
 
   // Income breakdown
-  const [collections, payrollExpenses, claimsReleased, expenseByCategory, totalExpenses, branches] = await Promise.all([
+  const [collections, payrollExpenses, claimsReleased, expenseByCategory, totalExpenses, branches, borrowingsInPeriod, repaymentsInPeriod] = await Promise.all([
     // Member payments
     db.payment.aggregate({
       where: { ...memberFilter, paymentDate: { gte: start, lt: end }, isFree: false },
@@ -58,6 +58,19 @@ export default async function ReportPage({
       _sum: { amount: true },
     }),
     db.branch.findMany({ orderBy: { name: "asc" } }),
+    // Borrowings in this period (money in — funding)
+    db.borrowing.findMany({
+      where: {
+        borrowedDate: { gte: start, lt: end },
+        ...(branchId ? { branchId } : {}),
+      },
+      include: { source: true },
+    }),
+    // Repayments in this period (money out)
+    db.borrowingRepayment.findMany({
+      where: { payDate: { gte: start, lt: end } },
+      include: { borrowing: { include: { source: true } } },
+    }),
   ]);
 
   // Get category names
@@ -70,8 +83,28 @@ export default async function ReportPage({
   const totalClaims = Number(claimsReleased._sum.releasedAmount ?? 0);
   const totalOpEx = Number(totalExpenses._sum.amount ?? 0);
   const grandTotalExpenses = totalOpEx + totalPayroll + totalClaims;
-  const netIncome = totalIncome - grandTotalExpenses;
-  const netMargin = totalIncome > 0 ? (netIncome / totalIncome) * 100 : 0;
+  const operatingIncome = totalIncome - grandTotalExpenses;
+  const netMargin = totalIncome > 0 ? (operatingIncome / totalIncome) * 100 : 0;
+
+  // Group borrowings by source
+  const borrowedBySource = new Map<string, number>();
+  for (const b of borrowingsInPeriod) {
+    const name = b.source.name;
+    borrowedBySource.set(name, (borrowedBySource.get(name) ?? 0) + Number(b.amount));
+  }
+  const totalBorrowed = Array.from(borrowedBySource.values()).reduce((s, v) => s + v, 0);
+
+  // Group repayments by source
+  const repaidBySource = new Map<string, number>();
+  for (const r of repaymentsInPeriod) {
+    const name = r.borrowing.source.name;
+    repaidBySource.set(name, (repaidBySource.get(name) ?? 0) + Number(r.amount));
+  }
+  const totalRepaid = Array.from(repaidBySource.values()).reduce((s, v) => s + v, 0);
+
+  // Net cash flow = operating income + borrowed - repaid
+  const netCashFlow = operatingIncome + totalBorrowed - totalRepaid;
+  const netIncome = operatingIncome; // keep operating income semantic
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -163,15 +196,74 @@ export default async function ReportPage({
             </div>
           </div>
 
-          {/* NET INCOME */}
-          <div className={`rounded-xl p-5 ${netIncome >= 0 ? "bg-blue-50 border border-blue-200" : "bg-red-50 border border-red-200"}`}>
+          {/* OPERATING INCOME */}
+          <div className={`rounded-xl p-5 ${operatingIncome >= 0 ? "bg-blue-50 border border-blue-200" : "bg-red-50 border border-red-200"}`}>
             <div className="flex justify-between items-center">
               <div>
-                <p className={`text-sm font-bold uppercase ${netIncome >= 0 ? "text-blue-700" : "text-red-700"}`}>Net Income</p>
-                <p className="text-xs text-gray-500 mt-0.5">Margin: {netMargin.toFixed(1)}%</p>
+                <p className={`text-sm font-bold uppercase ${operatingIncome >= 0 ? "text-blue-700" : "text-red-700"}`}>Operating Income</p>
+                <p className="text-xs text-gray-500 mt-0.5">Income − Expenses · Margin: {netMargin.toFixed(1)}%</p>
               </div>
-              <p className={`text-2xl font-black ${netIncome >= 0 ? "text-blue-700" : "text-red-700"}`}>
-                {formatCurrency(netIncome)}
+              <p className={`text-2xl font-black ${operatingIncome >= 0 ? "text-blue-700" : "text-red-700"}`}>
+                {formatCurrency(operatingIncome)}
+              </p>
+            </div>
+            {operatingIncome < 0 && (
+              <p className="mt-2 text-xs text-red-700">
+                ⚠ Negative operating income — funds needed to cover shortfall. See Borrowings below.
+              </p>
+            )}
+          </div>
+
+          {/* BORROWINGS / FUND SOURCES */}
+          {(totalBorrowed > 0 || totalRepaid > 0) && (
+            <div className="mt-6">
+              <h3 className="text-sm font-bold text-amber-700 uppercase border-b border-amber-200 pb-2 mb-3">
+                Financing Activities
+              </h3>
+              <div className="space-y-2 text-sm">
+                {totalBorrowed > 0 && (
+                  <>
+                    <p className="text-xs text-gray-500 font-semibold">Funds Borrowed (money in)</p>
+                    {Array.from(borrowedBySource.entries()).map(([name, amt]) => (
+                      <div key={name} className="flex justify-between pl-4">
+                        <span className="text-gray-700">From {name}</span>
+                        <span className="font-semibold text-green-700">+{formatCurrency(amt)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pl-4 pt-1 border-t border-gray-100 font-bold">
+                      <span>Total Borrowed</span>
+                      <span className="text-green-700">+{formatCurrency(totalBorrowed)}</span>
+                    </div>
+                  </>
+                )}
+                {totalRepaid > 0 && (
+                  <>
+                    <p className="text-xs text-gray-500 font-semibold mt-3">Loan Repayments (money out)</p>
+                    {Array.from(repaidBySource.entries()).map(([name, amt]) => (
+                      <div key={name} className="flex justify-between pl-4">
+                        <span className="text-gray-700">To {name}</span>
+                        <span className="font-semibold text-red-600">−{formatCurrency(amt)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pl-4 pt-1 border-t border-gray-100 font-bold">
+                      <span>Total Repaid</span>
+                      <span className="text-red-600">−{formatCurrency(totalRepaid)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* NET CASH FLOW */}
+          <div className={`rounded-xl p-5 mt-4 ${netCashFlow >= 0 ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className={`text-sm font-bold uppercase ${netCashFlow >= 0 ? "text-green-700" : "text-red-700"}`}>Net Cash Flow</p>
+                <p className="text-xs text-gray-500 mt-0.5">Operating Income + Borrowed − Repaid</p>
+              </div>
+              <p className={`text-2xl font-black ${netCashFlow >= 0 ? "text-green-700" : "text-red-700"}`}>
+                {formatCurrency(netCashFlow)}
               </p>
             </div>
           </div>

@@ -871,3 +871,61 @@ enum BranchRequestStatus {
   REJECTED
   RELEASED     // money/funds released to branch
 }
+
+// ─────────────────────────────────────────────
+// BORROWINGS / FUND SOURCES
+// ─────────────────────────────────────────────
+model FundSource {
+  id          String   @id @default(cuid())
+  name        String   @unique // "Chapel", "Ascendryx", "Owner", etc.
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  borrowings  Borrowing[]
+}
+
+model Borrowing {
+  id             String           @id @default(cuid())
+  borrowingNo    String           @unique
+  sourceId       String
+  source         FundSource       @relation(fields: [sourceId], references: [id])
+  branchId       String?
+  amount         Decimal          @db.Decimal(12, 2) // original borrowed amount
+  balance        Decimal          @db.Decimal(12, 2) // remaining balance
+  interestRate   Decimal          @db.Decimal(5, 2) @default(0) // % (optional)
+  borrowedDate   DateTime
+  dueDate        DateTime?
+  purpose        String           @db.Text // what the money was used for
+  status         BorrowingStatus  @default(ACTIVE)
+  notes          String?
+  recordedBy     String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  repayments     BorrowingRepayment[]
+
+  @@index([sourceId])
+  @@index([status])
+  @@index([borrowedDate])
+}
+
+enum BorrowingStatus {
+  ACTIVE
+  FULLY_PAID
+  WRITTEN_OFF
+}
+
+model BorrowingRepayment {
+  id           String    @id @default(cuid())
+  borrowingId  String
+  borrowing    Borrowing @relation(fields: [borrowingId], references: [id], onDelete: Cascade)
+  amount       Decimal   @db.Decimal(12, 2)
+  payDate      DateTime
+  paymentMethod String?
+  notes        String?
+  recordedBy   String?
+  createdAt    DateTime  @default(now())
+
+  @@index([borrowingId])
+}
