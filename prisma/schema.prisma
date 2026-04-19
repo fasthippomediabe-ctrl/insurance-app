@@ -929,3 +929,68 @@ model BorrowingRepayment {
 
   @@index([borrowingId])
 }
+
+// ─────────────────────────────────────────────
+// LIABILITIES / LONG-TERM LOANS
+// ─────────────────────────────────────────────
+model Liability {
+  id              String         @id @default(cuid())
+  liabilityNo     String         @unique
+  lenderName      String         // "BDO", "John Doe", "Sugbo Cooperative", etc.
+  lenderContact   String?
+  branchId        String?
+  principal       Decimal        @db.Decimal(12, 2)      // Original loan amount
+  interestRate    Decimal        @db.Decimal(5, 2) @default(0) // Annual interest rate %
+  totalPayable    Decimal        @db.Decimal(12, 2)      // Principal + total interest
+  currentBalance  Decimal        @db.Decimal(12, 2)      // Remaining balance (updated as payments recorded)
+  frequency       PaymentFrequency @default(MONTHLY)
+  paymentAmount   Decimal        @db.Decimal(10, 2)      // Amount per payment period
+  startDate       DateTime
+  maturityDate    DateTime?
+  termMonths      Int?
+  purpose         String?        @db.Text
+  status          LiabilityStatus @default(ACTIVE)
+  notes           String?
+  recordedBy      String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  payments        LiabilityPayment[]
+
+  @@index([status])
+  @@index([startDate])
+}
+
+enum PaymentFrequency {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum LiabilityStatus {
+  ACTIVE
+  FULLY_PAID
+  DEFAULTED
+  RESTRUCTURED
+}
+
+model LiabilityPayment {
+  id             String    @id @default(cuid())
+  liabilityId    String
+  liability      Liability @relation(fields: [liabilityId], references: [id], onDelete: Cascade)
+  payDate        DateTime
+  amount         Decimal   @db.Decimal(12, 2)          // Total paid
+  principalPaid  Decimal   @db.Decimal(12, 2) @default(0) // Portion applied to principal
+  interestPaid   Decimal   @db.Decimal(12, 2) @default(0) // Portion applied to interest
+  penaltyPaid    Decimal   @db.Decimal(12, 2) @default(0)
+  paymentMethod  String?
+  referenceNo    String?
+  notes          String?
+  recordedBy     String?
+  createdAt      DateTime  @default(now())
+
+  @@index([liabilityId])
+  @@index([payDate])
+}
