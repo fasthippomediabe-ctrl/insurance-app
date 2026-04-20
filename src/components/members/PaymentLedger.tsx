@@ -49,19 +49,24 @@ export default function PaymentLedger({
   };
 
   const rows: MonthEntry[] = [];
-  const cursor = new Date(startDate);
+  // Use year/month counters instead of Date.setMonth() to avoid overflow skipping short months.
+  // E.g. starting Jan 31 with setMonth(+1) jumps to Mar 3 because Feb has no day 31.
+  let year = startDate.getFullYear();
+  let month = startDate.getMonth() + 1; // 1-12
   let installmentNo = 1;
 
+  const todayY = today.getFullYear();
+  const todayM = today.getMonth() + 1;
+
   while (installmentNo <= 60) {
-    const y = cursor.getFullYear();
-    const m = cursor.getMonth() + 1;
-    const isFuture = cursor > today;
-    const payment = paidMap.get(`${y}-${m}`);
+    const isFuture = year > todayY || (year === todayY && month > todayM);
+    const payment = paidMap.get(`${year}-${month}`);
     rows.push({
-      year: y, month: m, installmentNo, payment,
+      year, month, installmentNo, payment,
       status: payment ? (payment.isFree ? "free" : "paid") : (isFuture ? "future" : "unpaid"),
     });
-    cursor.setMonth(cursor.getMonth() + 1);
+    month++;
+    if (month > 12) { month = 1; year++; }
     installmentNo++;
   }
 
