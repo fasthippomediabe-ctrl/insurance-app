@@ -57,11 +57,16 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[member.status]}`}>
               {isLapsed && member.status === "ACTIVE" ? "LAPSED (AUTO)" : member.status}
             </span>
-            {member.claims.length > 0 && (
-              <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-bold bg-red-600 text-white">
-                PLAN USED · {member.claims[0].deceasedType === "MEMBER" ? "MEMBER" : member.claims[0].deceasedType === "BENEFICIARY" ? "BENEFICIARY" : "SPOT"}
-              </span>
-            )}
+            {member.claims.length > 0 && (() => {
+              const c = member.claims[0];
+              const isServed = c.status === "REJECTED";
+              const deceasedLabel = c.deceasedType === "MEMBER" ? "MEMBER" : c.deceasedType === "BENEFICIARY" ? "BENEFICIARY" : "SPOT";
+              return (
+                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold text-white ${isServed ? "bg-amber-600" : "bg-red-600"}`}>
+                  {isServed ? "SERVED · " : "CLAIMED · "}{deceasedLabel}
+                </span>
+              );
+            })()}
           </div>
           <p className="text-gray-500 text-sm mt-1 font-mono">MAF No: {member.mafNo}</p>
         </div>
@@ -224,8 +229,8 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div>
-              <h2 className="font-bold text-red-800">Plan Used — Claim Filed</h2>
-              <p className="text-xs text-red-600">This plan has been used for insurance claim(s).</p>
+              <h2 className="font-bold text-red-800">Plan Used — Service Rendered</h2>
+              <p className="text-xs text-red-600">This member has been flagged as deceased. See claim/service record(s) below.</p>
             </div>
           </div>
           <div className="divide-y divide-gray-100">
