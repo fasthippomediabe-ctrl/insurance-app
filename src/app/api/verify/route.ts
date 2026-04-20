@@ -84,7 +84,7 @@ function isRateLimited(ip: string): boolean {
     return false;
   }
   entry.count++;
-  return entry.count > 5; // max 5 per minute
+  return entry.count > 30; // max 30 per minute
 }
 
 export async function POST(req: NextRequest) {
