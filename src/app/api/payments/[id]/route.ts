@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 const EditSchema = z.object({
-  adminUsername: z.string().min(1),
-  adminPassword: z.string().min(1),
   periodMonth: z.number().int().min(1).max(12).optional(),
   periodYear: z.number().int().min(2000).optional(),
   installmentNo: z.number().int().min(1).optional(),
@@ -19,18 +16,15 @@ const EditSchema = z.object({
   notes: z.string().nullable().optional(),
 });
 
-async function verifyAdmin(username: string, password: string): Promise<boolean> {
-  const user = await db.user.findFirst({
-    where: { username, role: "ADMIN", isActive: true },
-    select: { password: true },
-  });
-  if (!user) return false;
-  return bcrypt.compare(password, user.password);
-}
-
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = session.user as any;
+
+  // Only ADMIN and BRANCH_STAFF can edit payments directly
+  if (user.role !== "ADMIN" && user.role !== "BRANCH_STAFF") {
+    return NextResponse.json({ error: "Admin or Branch Staff only" }, { status: 403 });
+  }
 
   const body = await req.json();
   const parsed = EditSchema.safeParse(body);
@@ -38,12 +32,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { adminUsername, adminPassword, ...changes } = parsed.data;
+  const changes = parsed.data;
 
-  // Verify admin credentials
-  const isAdmin = await verifyAdmin(adminUsername, adminPassword);
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Invalid admin credentials. Edit not authorized." }, { status: 403 });
+  // Branch staff can only edit payments for their own branch
+  if (user.role === "BRANCH_STAFF") {
+    const payment = await db.payment.findUnique({
+      where: { id: params.id },
+      select: { member: { select: { branchId: true } } },
+    });
+    if (!payment || payment.member.branchId !== user.branchId) {
+      return NextResponse.json({ error: "Payment not in your branch." }, { status: 403 });
+    }
   }
 
   const payment = await db.payment.findUnique({ where: { id: params.id } });
