@@ -115,10 +115,11 @@ export default function PaymentLedger({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           memberId,
-          periodMonth: entry.month,
-          periodYear: entry.year,
-          installmentNo: entry.installmentNo,
-          amount: parseFloat(addAmount),
+          startPeriodMonth: entry.month,
+          startPeriodYear: entry.year,
+          startInstallmentNo: entry.installmentNo,
+          months: 1,
+          amountPerMonth: parseFloat(addAmount),
           paymentDate: new Date(entry.year, entry.month - 1, 15).toISOString(),
           paymentMethod: "CASH",
           isFree: false,
@@ -126,7 +127,10 @@ export default function PaymentLedger({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "Failed");
+        const msg = typeof err.error === "string"
+          ? err.error
+          : (err.error?.formErrors?.[0] ?? JSON.stringify(err.error) ?? "Failed");
+        throw new Error(msg);
       }
       setAdding(null);
       router.refresh();
