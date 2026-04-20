@@ -91,12 +91,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   const user = session?.user as any;
-  if (!user || user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Only admins can delete payments." }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.role !== "ADMIN" && user.role !== "BRANCH_STAFF") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const payment = await db.payment.findUnique({ where: { id: params.id } });
+  const payment = await db.payment.findUnique({
+    where: { id: params.id },
+    include: { member: { select: { branchId: true } } },
+  });
   if (!payment) return NextResponse.json({ error: "Payment not found." }, { status: 404 });
+
+  // Branch staff restrictions: same branch + current-month payments only
+  if (user.role === "BRANCH_STAFF") {
+    if (payment.member.branchId !== user.branchId) {
+      return NextResponse.json({ error: "Payment not in your branch." }, { status: 403 });
+    }
+    const now = new Date();
+    const isCurrentMonth = payment.periodMonth === now.getMonth() + 1 && payment.periodYear === now.getFullYear();
+    const recordedRecently = (now.getTime() - new Date(payment.createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000; // 7 days
+    if (!isCurrentMonth && !recordedRecently) {
+      return NextResponse.json({
+        error: "Branch staff can only delete current-month payments or recently-recorded entries (last 7 days). Contact admin for older corrections.",
+      }, { status: 403 });
+    }
+  }
 
   await db.$transaction(async (tx) => {
     // Delete linked commissions
