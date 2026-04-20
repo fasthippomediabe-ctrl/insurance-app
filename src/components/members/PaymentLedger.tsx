@@ -57,8 +57,31 @@ export default function PaymentLedger({
 
   const todayY = today.getFullYear();
   const todayM = today.getMonth() + 1;
+  // Extend ledger through current year (so late-recorded payments & 2026 entries show up)
+  const minEndYear = todayY;
+  const minEndMonth = 12;
 
-  while (installmentNo <= 60) {
+  // Also include any paid periods beyond the 60-month window
+  const maxPaidYear = Math.max(...Array.from(paidMap.values()).map((p) => p.periodYear), 0);
+  const maxPaidMonth = Math.max(
+    ...Array.from(paidMap.values())
+      .filter((p) => p.periodYear === maxPaidYear)
+      .map((p) => p.periodMonth),
+    0,
+  );
+
+  function shouldContinue(): boolean {
+    if (installmentNo <= 60) return true;
+    // Continue until we reach end of current year
+    if (year < minEndYear) return true;
+    if (year === minEndYear && month <= minEndMonth) return true;
+    // Continue until we've covered the latest paid period
+    if (year < maxPaidYear) return true;
+    if (year === maxPaidYear && month <= maxPaidMonth) return true;
+    return false;
+  }
+
+  while (shouldContinue() && installmentNo <= 120) {
     const isFuture = year > todayY || (year === todayY && month > todayM);
     const payment = paidMap.get(`${year}-${month}`);
     rows.push({
