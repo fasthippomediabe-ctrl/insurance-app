@@ -7,7 +7,7 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 export default async function MembersPage({
   searchParams,
 }: {
-  searchParams: { status?: string; search?: string; branch?: string; page?: string };
+  searchParams: { status?: string; search?: string; branch?: string; page?: string; agent?: string; collector?: string };
 }) {
   const session = await auth();
   const user = session!.user as any;
@@ -19,6 +19,8 @@ export default async function MembersPage({
   if ((user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")) where.branchId = user.branchId;
   if (searchParams.status) where.status = searchParams.status as MemberStatus;
   if (searchParams.branch && user.role === "ADMIN") where.branchId = searchParams.branch;
+  if (searchParams.agent) where.agentId = searchParams.agent;
+  if (searchParams.collector) where.collectorId = searchParams.collector;
   if (searchParams.search) {
     where.OR = [
       { mafNo: { contains: searchParams.search, mode: "insensitive" } },
@@ -28,7 +30,12 @@ export default async function MembersPage({
     ];
   }
 
-  const [members, total, branches] = await Promise.all([
+  // Employee filter: only show agents/collectors for the staff's branch (or all for admin)
+  const empBranchFilter = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR")
+    ? { branchId: user.branchId }
+    : (searchParams.branch && user.role === "ADMIN" ? { branchId: searchParams.branch } : {});
+
+  const [members, total, branches, agents, collectors] = await Promise.all([
     db.member.findMany({
       where,
       include: { branch: true, agent: true, collector: true },
@@ -38,6 +45,16 @@ export default async function MembersPage({
     }),
     db.member.count({ where }),
     user.role === "ADMIN" ? db.branch.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
+    db.employee.findMany({
+      where: { isActive: true, primaryPosition: "MO", ...empBranchFilter },
+      select: { id: true, firstName: true, lastName: true, employeeNo: true, branch: { select: { name: true } } },
+      orderBy: { lastName: "asc" },
+    }),
+    db.employee.findMany({
+      where: { isActive: true, primaryPosition: "AO", ...empBranchFilter },
+      select: { id: true, firstName: true, lastName: true, employeeNo: true, branch: { select: { name: true } } },
+      orderBy: { lastName: "asc" },
+    }),
   ]);
 
   const totalPages = Math.ceil(total / pageSize);
@@ -98,6 +115,30 @@ export default async function MembersPage({
             </select>
           </div>
         )}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Agent (MO)</label>
+          <select name="agent" defaultValue={searchParams.agent ?? ""}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+            <option value="">All Agents</option>
+            {agents.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.firstName} {a.lastName}{user.role === "ADMIN" ? ` · ${a.branch?.name ?? ""}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Collector (AO)</label>
+          <select name="collector" defaultValue={searchParams.collector ?? ""}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+            <option value="">All Collectors</option>
+            {collectors.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.firstName} {c.lastName}{user.role === "ADMIN" ? ` · ${c.branch?.name ?? ""}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
         <button type="submit"
           className="bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
           Search
@@ -177,13 +218,13 @@ export default async function MembersPage({
             <span>Page {page} of {totalPages}</span>
             <div className="flex gap-2">
               {page > 1 && (
-                <Link href={`/members?page=${page - 1}&status=${searchParams.status ?? ""}&search=${searchParams.search ?? ""}`}
+                <Link href={`/members?page=${page - 1}&status=${searchParams.status ?? ""}&search=${searchParams.search ?? ""}&branch=${searchParams.branch ?? ""}&agent=${searchParams.agent ?? ""}&collector=${searchParams.collector ?? ""}`}
                   className="px-3 py-1 border rounded hover:bg-gray-50">
                   Previous
                 </Link>
               )}
               {page < totalPages && (
-                <Link href={`/members?page=${page + 1}&status=${searchParams.status ?? ""}&search=${searchParams.search ?? ""}`}
+                <Link href={`/members?page=${page + 1}&status=${searchParams.status ?? ""}&search=${searchParams.search ?? ""}&branch=${searchParams.branch ?? ""}&agent=${searchParams.agent ?? ""}&collector=${searchParams.collector ?? ""}`}
                   className="px-3 py-1 border rounded hover:bg-gray-50">
                   Next
                 </Link>
