@@ -127,9 +127,19 @@ export default function PaymentLedger({
       });
       if (!res.ok) {
         const err = await res.json();
-        const msg = typeof err.error === "string"
-          ? err.error
-          : (err.error?.formErrors?.[0] ?? JSON.stringify(err.error) ?? "Failed");
+        let msg = "Failed";
+        if (typeof err.error === "string") {
+          msg = err.error;
+        } else if (err.error?.formErrors?.length) {
+          msg = err.error.formErrors.join(", ");
+        } else if (err.error?.fieldErrors) {
+          const fe = err.error.fieldErrors;
+          msg = Object.entries(fe)
+            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+            .join(" | ");
+        } else {
+          msg = JSON.stringify(err.error);
+        }
         throw new Error(msg);
       }
       setAdding(null);
