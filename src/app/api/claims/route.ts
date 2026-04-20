@@ -129,7 +129,7 @@ export async function PATCH(req: NextRequest) {
   const user = session.user as any;
 
   const data = await req.json();
-  const { id, status, approvedAmount, releasedAmount, rejectionReason, notes, courierTracking, additionalDocsNote, statusNote } = data;
+  const { id, status, approvedAmount, releasedAmount, rejectionReason, notes, courierTracking, additionalDocsNote, statusNote, dateReleased: customReleaseDate, dateOfDeath: customDeathDate } = data;
 
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -147,7 +147,7 @@ export async function PATCH(req: NextRequest) {
     if (status === "UNDER_REVIEW") updateData.verifiedDate = now;
     if (status === "ADDITIONAL_DOCS_NEEDED" && additionalDocsNote) updateData.additionalDocsNote = additionalDocsNote;
     if (status === "APPROVED") { updateData.approvedDate = now; updateData.approvedBy = user.id; }
-    if (status === "RELEASED") { updateData.dateReleased = now; }
+    if (status === "RELEASED") { updateData.dateReleased = customReleaseDate ? new Date(customReleaseDate) : now; }
     if (status === "REJECTED") { updateData.rejectedDate = now; updateData.rejectionReason = rejectionReason; }
   }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatCurrency, formatDate, MOP_LABELS, checkLapseStatus } from "@/lib/utils";
 import PaymentLedger from "@/components/members/PaymentLedger";
 import DeleteMemberButton from "@/components/members/DeleteMemberButton";
+import MarkLegacyClaimButton from "@/components/members/MarkLegacyClaimButton";
 
 export default async function MemberDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -91,10 +92,19 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             + Remittance
           </Link>
           {member.claims.length === 0 && (
-            <Link href={`/claims/new?memberId=${member.id}`}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
-              File Claim
-            </Link>
+            <>
+              <Link href={`/claims/new?memberId=${member.id}`}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
+                File Claim
+              </Link>
+              {user.role === "ADMIN" && (
+                <MarkLegacyClaimButton
+                  memberId={member.id}
+                  memberName={`${member.firstName} ${member.lastName}`}
+                  planCategory={member.planCategory}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
