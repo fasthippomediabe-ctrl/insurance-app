@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface Beneficiary { id: string; firstName: string; lastName: string; relationship: string }
@@ -92,10 +92,13 @@ function checkEligibility(
   return { eligible: true, reason: "" };
 }
 
-export default function NewClaimForm({ members }: { members: Member[] }) {
+export default function NewClaimForm({ members, preselectedMemberId = "" }: { members: Member[]; preselectedMemberId?: string }) {
   const router = useRouter();
-  const [memberId, setMemberId] = useState("");
-  const [memberSearch, setMemberSearch] = useState("");
+  const preselected = members.find((m) => m.id === preselectedMemberId);
+  const [memberId, setMemberId] = useState(preselectedMemberId);
+  const [memberSearch, setMemberSearch] = useState(
+    preselected ? `${preselected.mafNo} — ${preselected.firstName} ${preselected.lastName}` : ""
+  );
   const [showDropdown, setShowDropdown] = useState(false);
   const [deceasedType, setDeceasedType] = useState<"MEMBER" | "BENEFICIARY">("MEMBER");
   const [deathType, setDeathType] = useState<"NATURAL" | "ACCIDENT" | "SUICIDE">("NATURAL");
@@ -111,6 +114,14 @@ export default function NewClaimForm({ members }: { members: Member[] }) {
   const [error, setError] = useState("");
 
   const selectedMember = members.find((m) => m.id === memberId);
+
+  // Pre-fill deceased name if a member is preselected via URL
+  useEffect(() => {
+    if (preselected && !deceasedName) {
+      setDeceasedName(`${preselected.firstName} ${preselected.lastName}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Eligibility check
   const eligibility = selectedMember && dateOfDeath

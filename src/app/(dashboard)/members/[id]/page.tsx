@@ -90,6 +90,12 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium">
             + Remittance
           </Link>
+          {member.claims.length === 0 && (
+            <Link href={`/claims/new?memberId=${member.id}`}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
+              File Claim
+            </Link>
+          )}
         </div>
       </div>
 
