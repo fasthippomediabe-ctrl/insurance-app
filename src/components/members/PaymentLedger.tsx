@@ -83,6 +83,24 @@ export default function PaymentLedger({
     setEditAmount(String(Number(payment.amount)));
   }
 
+  async function deletePayment(paymentId: string) {
+    if (!confirm("Delete this payment entry? This cannot be undone.")) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/payments/${paymentId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(typeof err.error === "string" ? err.error : "Failed");
+      }
+      setEditing(null);
+      router.refresh();
+    } catch (e: any) {
+      alert("Failed to delete: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveEdit(paymentId: string) {
     setSaving(true);
     try {
@@ -91,11 +109,26 @@ export default function PaymentLedger({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: parseFloat(editAmount) }),
       });
-      if (!res.ok) throw new Error("Failed to save");
+      if (!res.ok) {
+        const err = await res.json();
+        let msg = "Failed";
+        if (typeof err.error === "string") {
+          msg = err.error;
+        } else if (err.error?.formErrors?.length) {
+          msg = err.error.formErrors.join(", ");
+        } else if (err.error?.fieldErrors) {
+          msg = Object.entries(err.error.fieldErrors)
+            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+            .join(" | ");
+        } else {
+          msg = JSON.stringify(err.error);
+        }
+        throw new Error(msg);
+      }
       setEditing(null);
       router.refresh();
-    } catch (e) {
-      alert("Failed to save. Admin access required.");
+    } catch (e: any) {
+      alert("Failed to save: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -217,6 +250,11 @@ export default function PaymentLedger({
                           <button onClick={() => saveEdit(e.payment!.id)} disabled={saving}
                             className="flex-1 text-[9px] bg-blue-500 text-white rounded py-0.5 hover:bg-blue-600">
                             {saving ? "..." : "Save"}
+                          </button>
+                          <button onClick={() => deletePayment(e.payment!.id)} disabled={saving}
+                            className="text-[9px] bg-red-500 text-white rounded py-0.5 px-1 hover:bg-red-600"
+                            title="Delete this payment">
+                            ✕
                           </button>
                           <button onClick={() => setEditing(null)}
                             className="flex-1 text-[9px] bg-gray-300 text-gray-700 rounded py-0.5 hover:bg-gray-400">

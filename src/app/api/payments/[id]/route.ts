@@ -8,7 +8,7 @@ const EditSchema = z.object({
   periodYear: z.number().int().min(2000).optional(),
   installmentNo: z.number().int().min(1).optional(),
   paymentDate: z.string().optional(),
-  amount: z.number().positive().optional(),
+  amount: z.number().min(0).optional(),
   isFree: z.boolean().optional(),
   isSpotCash: z.boolean().optional(),
   paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "GCASH", "OTHER"]).optional(),
