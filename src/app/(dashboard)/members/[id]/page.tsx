@@ -18,6 +18,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
       collector: true,
       branch: true,
       payments: { orderBy: [{ periodYear: "asc" }, { periodMonth: "asc" }] },
+      claims: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -55,6 +56,11 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[member.status]}`}>
               {isLapsed && member.status === "ACTIVE" ? "LAPSED (AUTO)" : member.status}
             </span>
+            {member.claims.length > 0 && (
+              <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-bold bg-red-600 text-white">
+                PLAN USED · {member.claims[0].deceasedType === "MEMBER" ? "MEMBER" : member.claims[0].deceasedType === "BENEFICIARY" ? "BENEFICIARY" : "SPOT"}
+              </span>
+            )}
           </div>
           <p className="text-gray-500 text-sm mt-1 font-mono">MAF No: {member.mafNo}</p>
         </div>
@@ -193,6 +199,51 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           </Link>
         </div>
       </div>
+
+      {/* Plan Usage / Claims */}
+      {member.claims.length > 0 && (
+        <div className="bg-white rounded-xl border-2 border-red-200 shadow-sm overflow-hidden">
+          <div className="bg-red-50 px-5 py-3 border-b border-red-200 flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <h2 className="font-bold text-red-800">Plan Used — Claim Filed</h2>
+              <p className="text-xs text-red-600">This plan has been used for insurance claim(s).</p>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {member.claims.map((c) => (
+              <Link key={c.id} href={`/claims/${c.id}`} className="block px-5 py-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <p className="font-mono text-xs text-gray-500">{c.claimNo}</p>
+                    <p className="font-semibold text-gray-900 mt-0.5">
+                      <span className="text-red-700">{c.deceasedType === "MEMBER" ? "MEMBER" : c.deceasedType === "BENEFICIARY" ? "BENEFICIARY" : "SPOT SERVICE"}</span>
+                      {" · "}{c.deceasedName}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Date of Death: {c.dateOfDeath.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
+                      {c.deathType && ` · ${c.deathType}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${
+                      c.status === "RELEASED" ? "bg-green-100 text-green-700" :
+                      c.status === "REJECTED" ? "bg-red-100 text-red-700" :
+                      c.status === "APPROVED" ? "bg-blue-100 text-blue-700" :
+                      "bg-yellow-100 text-yellow-700"
+                    }`}>{c.status.replace(/_/g, " ")}</span>
+                    {c.releasedAmount && (
+                      <p className="text-xs text-green-700 font-bold mt-1">{formatCurrency(Number(c.releasedAmount))}</p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Payment Ledger */}
       <PaymentLedger
