@@ -251,6 +251,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         effectivityDate={(member.effectivityDate ?? member.enrollmentDate).toString()}
         monthlyDue={Number(member.monthlyDue)}
         memberId={member.id}
+        isAdmin={user.role === "ADMIN"}
       />
     </div>
   );

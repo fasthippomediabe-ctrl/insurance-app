@@ -21,11 +21,13 @@ export default function PaymentLedger({
   effectivityDate,
   monthlyDue,
   memberId,
+  isAdmin = false,
 }: {
   payments: Payment[];
   effectivityDate: string;
   monthlyDue: number;
   memberId?: string;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
@@ -251,11 +253,13 @@ export default function PaymentLedger({
                             className="flex-1 text-[9px] bg-blue-500 text-white rounded py-0.5 hover:bg-blue-600">
                             {saving ? "..." : "Save"}
                           </button>
-                          <button onClick={() => deletePayment(e.payment!.id)} disabled={saving}
-                            className="text-[9px] bg-red-500 text-white rounded py-0.5 px-1 hover:bg-red-600"
-                            title="Delete this payment">
-                            ✕
-                          </button>
+                          {isAdmin && (
+                            <button onClick={() => deletePayment(e.payment!.id)} disabled={saving}
+                              className="text-[9px] bg-red-500 text-white rounded py-0.5 px-1 hover:bg-red-600"
+                              title="Delete this payment">
+                              ✕
+                            </button>
+                          )}
                           <button onClick={() => setEditing(null)}
                             className="flex-1 text-[9px] bg-gray-300 text-gray-700 rounded py-0.5 hover:bg-gray-400">
                             Esc
