@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, MOP_LABELS, checkLapseStatus } from "@/lib/
 import PaymentLedger from "@/components/members/PaymentLedger";
 import DeleteMemberButton from "@/components/members/DeleteMemberButton";
 import MarkLegacyClaimButton from "@/components/members/MarkLegacyClaimButton";
+import BeneficiariesPanel from "@/components/members/BeneficiariesPanel";
 
 export default async function MemberDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -150,34 +151,21 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             </div>
           </div>
 
-          {/* Beneficiaries */}
-          {member.beneficiaries.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-800 mb-4 pb-2 border-b">Beneficiaries</h2>
-              <div className="space-y-3">
-                {member.beneficiaries.map((b) => (
-                  <div key={b.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50 text-sm grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div>
-                      <p className="text-xs text-gray-400">Name</p>
-                      <p className="font-medium">{b.firstName} {b.lastName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Relationship</p>
-                      <p>{b.relationship}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Date of Birth</p>
-                      <p>{formatDate(b.dateOfBirth)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Age</p>
-                      <p>{b.age ?? "—"}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Beneficiaries (editable) */}
+          <BeneficiariesPanel
+            memberId={member.id}
+            beneficiaries={member.beneficiaries.map((b) => ({
+              id: b.id,
+              order: b.order,
+              firstName: b.firstName,
+              middleName: b.middleName,
+              lastName: b.lastName,
+              dateOfBirth: b.dateOfBirth?.toISOString() ?? null,
+              age: b.age,
+              relationship: b.relationship,
+              effectivityDate: b.effectivityDate?.toISOString() ?? null,
+            }))}
+          />
         </div>
 
         {/* Payment Summary sidebar */}
