@@ -16,6 +16,7 @@ interface Profile {
   pagibigContribution: number; withholdingTax: number;
   lateGraceMins: number; lateRatePerHour: number; dailyRate: number;
   payType: string; hoursPerDay: number;
+  overtimeRate: number; workingDaysPerCutoff: number;
   employee: Employee;
 }
 
@@ -51,6 +52,8 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
       dailyRate: existing.dailyRate,
       payType: existing.payType ?? "MONTHLY",
       hoursPerDay: existing.hoursPerDay ?? 8,
+      overtimeRate: existing.overtimeRate ?? 0,
+      workingDaysPerCutoff: existing.workingDaysPerCutoff ?? 11,
     } : {
       employeeId: empId,
       basicSalary: 0, riceAllowance: 0, transpoAllowance: 0, otherAllowance: 0,
@@ -58,6 +61,7 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
       sssContribution: 0, philhealthContribution: 0, pagibigContribution: 0, withholdingTax: 0,
       lateGraceMins: 30, lateRatePerHour: 0, dailyRate: 0,
       payType: "MONTHLY", hoursPerDay: 8,
+      overtimeRate: 0, workingDaysPerCutoff: 11,
     });
     setEditing(empId);
     setMsg("");
@@ -234,6 +238,20 @@ export default function SalaryManager({ employees, profiles }: { employees: Empl
                     <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                       value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: parseFloat(e.target.value) || 0 })} />
                     <p className="text-[10px] text-gray-400 mt-0.5">0 = auto (basic/22)</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Overtime Rate / Hour</label>
+                    <input type="number" step="0.01" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      value={form.overtimeRate} onChange={(e) => setForm({ ...form, overtimeRate: parseFloat(e.target.value) || 0 })} />
+                    <p className="text-[10px] text-gray-400 mt-0.5">Pay per OT hour</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Working Days per Cutoff</label>
+                    <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      value={form.workingDaysPerCutoff} onChange={(e) => setForm({ ...form, workingDaysPerCutoff: parseInt(e.target.value) || 11 })} />
+                    <p className="text-[10px] text-gray-400 mt-0.5">Expected working days per half-month (e.g., 11)</p>
                   </div>
                 </div>
               </div>

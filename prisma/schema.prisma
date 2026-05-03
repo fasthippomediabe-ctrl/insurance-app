@@ -617,6 +617,8 @@ model SalaryProfile {
   dailyRate       Decimal  @db.Decimal(10, 2) @default(0) // Deduction per day of absence (0 = auto from basic/22)
   payType         PayType  @default(MONTHLY) // MONTHLY or DAILY
   hoursPerDay     Int      @default(8)
+  overtimeRate    Decimal  @db.Decimal(10, 2) @default(0) // Pay per OT hour (e.g., 1.25 × hourly rate)
+  workingDaysPerCutoff Int @default(11) // Expected working days per half-cutoff (used to compute absences)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

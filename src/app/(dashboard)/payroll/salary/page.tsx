@@ -43,6 +43,8 @@ export default async function SalaryPage() {
         dailyRate: Number(p.dailyRate),
         payType: (p as any).payType ?? "MONTHLY",
         hoursPerDay: (p as any).hoursPerDay ?? 8,
+        overtimeRate: Number((p as any).overtimeRate ?? 0),
+        workingDaysPerCutoff: (p as any).workingDaysPerCutoff ?? 11,
         employee: { ...p.employee, branch: p.employee.branch?.name ?? "" },
       }))}
     />

@@ -103,21 +103,43 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const hoursPerDay = (profile as any).hoursPerDay || 8;
+    const overtimeRate = Number((profile as any).overtimeRate) || 0;
+    const workingDaysPerCutoff = (profile as any).workingDaysPerCutoff || 11;
+
     const attendanceDaysWorked = attendance.filter((a) => !a.isAbsent && !a.isHoliday).reduce((s, a) => s + (a.isHalfDay ? 0.5 : 1), 0);
     const attendanceDaysAbsent = attendance.filter((a) => a.isAbsent).length;
+    const attendanceDaysHoliday = attendance.filter((a) => a.isHoliday).length;
     const attendanceLateMins = attendance.reduce((s, a) => s + (a.lateMinutes || 0), 0);
+    // Compute overtime hours: extra hours worked beyond hoursPerDay per day (only on days actually worked)
+    const attendanceOvertimeHours = attendance
+      .filter((a) => !a.isAbsent && !a.isHoliday)
+      .reduce((s, a) => s + Math.max(0, Number(a.hoursWorked) - hoursPerDay), 0);
 
-    // Get overrides for this employee (attendance + extras) — overrides take precedence
+    // Get overrides for this employee — overrides take precedence
     const ov = overrides?.[profile.employeeId] ?? {};
-    const overtime = ov.overtime ?? 0;
     const holidayPay = ov.holidayPay ?? 0;
     const otherEarnings = ov.otherEarnings ?? 0;
     const otherDeductions = ov.otherDeductions ?? 0;
 
-    // Attendance values — use override if provided, else attendance records, else defaults
-    const daysWorked = ov.daysWorked ?? (attendance.length > 0 ? attendanceDaysWorked : (half === 1 ? 11 : 11));
-    const daysAbsent = ov.daysAbsent ?? (attendance.length > 0 ? attendanceDaysAbsent : 0);
+    // Attendance values — override > attendance records > sensible defaults
+    const hasAttendance = attendance.length > 0;
+    const daysWorked = ov.daysWorked ?? (hasAttendance ? attendanceDaysWorked : workingDaysPerCutoff);
+    // Absences: override > attendance count > computed from (workingDays - daysWorked - daysHoliday)
+    let daysAbsent: number;
+    if (ov.daysAbsent !== undefined) {
+      daysAbsent = ov.daysAbsent;
+    } else if (hasAttendance) {
+      // Use attendance records, but also count "missing days" if days_worked + days_absent + holidays < expected
+      const recordedDays = attendanceDaysWorked + attendanceDaysAbsent + attendanceDaysHoliday;
+      const missingDays = Math.max(0, workingDaysPerCutoff - recordedDays);
+      daysAbsent = attendanceDaysAbsent + missingDays;
+    } else {
+      daysAbsent = 0;
+    }
     const rawLateMins = ov.lateMins ?? attendanceLateMins;
+    const overtimeHours = ov.overtimeHours ?? attendanceOvertimeHours;
+    const overtime = ov.overtime ?? Math.round(overtimeHours * overtimeRate * 100) / 100;
 
     // Late deduction: first grace mins per period is free, remaining charged per hour
     const graceMins = Number(profile.lateGraceMins) || 30;
@@ -129,19 +151,16 @@ export async function POST(req: NextRequest) {
     // Compute basic pay based on payType
     let basicPay: number;
     let absences: number;
+    const dailyRate = Number(profile.dailyRate) > 0
+      ? Number(profile.dailyRate)
+      : Number(profile.basicSalary) / 22;
     if (payType === "DAILY") {
-      // DAILY: basic pay = daysWorked × dailyRate
-      const dailyRate = Number(profile.dailyRate) > 0
-        ? Number(profile.dailyRate)
-        : Number(profile.basicSalary) / 22;
+      // DAILY: basic pay = daysWorked × dailyRate, no absence deduction
       basicPay = Math.round(daysWorked * dailyRate * 100) / 100;
-      absences = 0; // no separate absence deduction — already not paid for absent days
+      absences = 0;
     } else {
       // MONTHLY: fixed basic pay (half month), deduct for absences
       basicPay = Number(profile.basicSalary) / 2;
-      const dailyRate = Number(profile.dailyRate) > 0
-        ? Number(profile.dailyRate)
-        : Number(profile.basicSalary) / 22;
       absences = Math.round(daysAbsent * dailyRate * 100) / 100;
     }
 
