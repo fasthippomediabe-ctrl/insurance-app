@@ -89,7 +89,13 @@ export async function POST(req: NextRequest) {
         periodEnd,
       },
     });
-    if (existing) continue;
+    // Skip if existing AND no overrides supplied for this employee.
+    // If overrides are provided, regenerate (delete the existing payslip).
+    const hasOverrideForThisEmp = overrides && overrides[profile.employeeId];
+    if (existing && !hasOverrideForThisEmp) continue;
+    if (existing && hasOverrideForThisEmp) {
+      await db.payslip.delete({ where: { id: existing.id } });
+    }
 
     const payType = (profile as any).payType || "MONTHLY";
     const allowances = Number(profile.riceAllowance) + Number(profile.transpoAllowance) + Number(profile.otherAllowance);
