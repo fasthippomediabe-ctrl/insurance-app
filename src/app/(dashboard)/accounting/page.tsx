@@ -17,6 +17,7 @@ export default async function AccountingPage() {
 
   const [
     incomeAgg,
+    otherIncomeAgg,
     expenseAgg,
     expenseCount,
     categoryCount,
@@ -25,6 +26,10 @@ export default async function AccountingPage() {
   ] = await Promise.all([
     db.payment.aggregate({
       where: { paymentDate: { gte: start, lt: end }, isFree: false },
+      _sum: { amount: true },
+    }),
+    db.income.aggregate({
+      where: { incomeDate: { gte: start, lt: end }, status: "POSTED", category: { type: { not: "CAPITAL" } } },
       _sum: { amount: true },
     }),
     db.expense.aggregate({
@@ -42,7 +47,9 @@ export default async function AccountingPage() {
     }),
   ]);
 
-  const income = Number(incomeAgg._sum.amount ?? 0);
+  const collections = Number(incomeAgg._sum.amount ?? 0);
+  const otherIncome = Number(otherIncomeAgg._sum.amount ?? 0);
+  const income = collections + otherIncome;
   const expenses = Number(expenseAgg._sum.amount ?? 0);
   const netIncome = income - expenses;
   const periodLabel = `${MONTHS[month - 1]} ${year}`;
@@ -54,7 +61,15 @@ export default async function AccountingPage() {
           <h1 className="text-2xl font-bold text-gray-900">Accounting</h1>
           <p className="text-gray-500 text-sm mt-0.5">Income, expenses, and financial reports</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Link href="/accounting/income/new"
+            className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            + Record Income
+          </Link>
+          <Link href="/accounting/income"
+            className="bg-green-800 hover:bg-green-900 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            View Income
+          </Link>
           <Link href="/accounting/expenses/new"
             className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
             + Record Expense

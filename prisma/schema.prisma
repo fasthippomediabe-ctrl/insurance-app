@@ -833,6 +833,58 @@ enum ExpenseStatus {
 }
 
 // ─────────────────────────────────────────────
+// INCOME (capital, processing fees, passbook fees, etc.
+// member collections live in Payment and are reported separately)
+// ─────────────────────────────────────────────
+model IncomeCategory {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  type        IncomeType @default(FEE)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  incomes     Income[]
+}
+
+enum IncomeType {
+  CAPITAL    // owner capital contribution (one-time, not operating income)
+  FEE        // processing fee, passbook fee, transfer fee, etc.
+  PREMIUM    // insurance premium income (other than tracked Payments)
+  INTEREST   // interest earned on bank deposits, loans receivable
+  OTHER
+}
+
+model Income {
+  id            String         @id @default(cuid())
+  incomeNo      String         @unique
+  categoryId    String
+  category      IncomeCategory @relation(fields: [categoryId], references: [id])
+  branchId      String?
+  amount        Decimal        @db.Decimal(12, 2)
+  incomeDate    DateTime
+  description   String
+  payer         String?
+  paymentMethod String?
+  receiptNo     String?
+  receiptPhoto  String?        @db.Text
+  notes         String?
+  recordedBy    String?
+  status        IncomeStatus   @default(POSTED)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([branchId])
+  @@index([incomeDate])
+}
+
+enum IncomeStatus {
+  POSTED
+  VOID
+}
+
+// ─────────────────────────────────────────────
 // BRANCH REQUESTS (payment/expense/liability requests from branch to HO)
 // ─────────────────────────────────────────────
 model BranchRequest {
