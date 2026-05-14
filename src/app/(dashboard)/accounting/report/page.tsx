@@ -22,20 +22,12 @@ export default async function ReportPage({
 
   const memberFilter = branchId ? { member: { branchId } } : {};
   const expenseBranchFilter = branchId ? { branchId } : {};
-  const incomeBranchFilter = branchId ? { branchId } : {};
 
   // Income breakdown
-  const [collections, otherIncomeByCategory, payrollExpenses, claimsReleased, expenseByCategory, totalExpenses, branches, borrowingsInPeriod, repaymentsInPeriod] = await Promise.all([
+  const [collections, payrollExpenses, claimsReleased, expenseByCategory, totalExpenses, branches, borrowingsInPeriod, repaymentsInPeriod] = await Promise.all([
     // Member payments
     db.payment.aggregate({
       where: { ...memberFilter, paymentDate: { gte: start, lt: end }, isFree: false },
-      _sum: { amount: true },
-      _count: true,
-    }),
-    // Other income by category (processing fee, passbook fee, capital, etc.)
-    db.income.groupBy({
-      by: ["categoryId"],
-      where: { ...incomeBranchFilter, status: "POSTED", incomeDate: { gte: start, lt: end } },
       _sum: { amount: true },
       _count: true,
     }),
@@ -81,37 +73,12 @@ export default async function ReportPage({
     }),
   ]);
 
-  // Get expense category names
+  // Get category names
   const categoryIds = expenseByCategory.map((e) => e.categoryId);
   const categories = await db.expenseCategory.findMany({ where: { id: { in: categoryIds } } });
   const catMap = new Map(categories.map((c) => [c.id, c.name]));
 
-  // Get income category info (name + type) — separate capital from operating income
-  const incomeCategoryIds = otherIncomeByCategory.map((e) => e.categoryId);
-  const incomeCategories = await db.incomeCategory.findMany({ where: { id: { in: incomeCategoryIds } } });
-  const incomeCatMap = new Map(incomeCategories.map((c) => [c.id, c]));
-
-  const collectionsTotal = Number(collections._sum.amount ?? 0);
-
-  // Split other income into operating vs capital
-  let otherOperatingIncome = 0;
-  let capitalContributions = 0;
-  const operatingIncomeBreakdown: Array<{ name: string; amount: number; count: number }> = [];
-  const capitalBreakdown: Array<{ name: string; amount: number; count: number }> = [];
-  for (const row of otherIncomeByCategory) {
-    const cat = incomeCatMap.get(row.categoryId);
-    const amt = Number(row._sum.amount ?? 0);
-    const count = row._count ?? 0;
-    if (cat?.type === "CAPITAL") {
-      capitalContributions += amt;
-      capitalBreakdown.push({ name: cat.name, amount: amt, count });
-    } else {
-      otherOperatingIncome += amt;
-      operatingIncomeBreakdown.push({ name: cat?.name ?? "Unknown", amount: amt, count });
-    }
-  }
-
-  const totalIncome = collectionsTotal + otherOperatingIncome;
+  const totalIncome = Number(collections._sum.amount ?? 0);
   const totalPayroll = Number(payrollExpenses._sum.grossPay ?? 0);
   const totalClaims = Number(claimsReleased._sum.releasedAmount ?? 0);
   const totalOpEx = Number(totalExpenses._sum.amount ?? 0);
@@ -135,8 +102,8 @@ export default async function ReportPage({
   }
   const totalRepaid = Array.from(repaidBySource.values()).reduce((s, v) => s + v, 0);
 
-  // Net cash flow = operating income + capital contributions + borrowed - repaid
-  const netCashFlow = operatingIncome + capitalContributions + totalBorrowed - totalRepaid;
+  // Net cash flow = operating income + borrowed - repaid
+  const netCashFlow = operatingIncome + totalBorrowed - totalRepaid;
   const netIncome = operatingIncome; // keep operating income semantic
 
   return (
@@ -185,14 +152,8 @@ export default async function ReportPage({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-700">Member Collections ({collections._count} payments)</span>
-                <span className="font-semibold">{formatCurrency(collectionsTotal)}</span>
+                <span className="font-semibold">{formatCurrency(totalIncome)}</span>
               </div>
-              {operatingIncomeBreakdown.map((row) => (
-                <div key={row.name} className="flex justify-between">
-                  <span className="text-gray-700">{row.name} ({row.count})</span>
-                  <span className="font-semibold">{formatCurrency(row.amount)}</span>
-                </div>
-              ))}
             </div>
             <div className="flex justify-between mt-3 pt-2 border-t font-bold text-green-700">
               <span>TOTAL INCOME</span>
@@ -253,31 +214,16 @@ export default async function ReportPage({
             )}
           </div>
 
-          {/* FINANCING ACTIVITIES — capital + borrowings + repayments */}
-          {(capitalContributions > 0 || totalBorrowed > 0 || totalRepaid > 0) && (
+          {/* BORROWINGS / FUND SOURCES */}
+          {(totalBorrowed > 0 || totalRepaid > 0) && (
             <div className="mt-6">
               <h3 className="text-sm font-bold text-amber-700 uppercase border-b border-amber-200 pb-2 mb-3">
                 Financing Activities
               </h3>
               <div className="space-y-2 text-sm">
-                {capitalContributions > 0 && (
-                  <>
-                    <p className="text-xs text-gray-500 font-semibold">Capital Contributions (money in)</p>
-                    {capitalBreakdown.map((row) => (
-                      <div key={row.name} className="flex justify-between pl-4">
-                        <span className="text-gray-700">{row.name} ({row.count})</span>
-                        <span className="font-semibold text-green-700">+{formatCurrency(row.amount)}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between pl-4 pt-1 border-t border-gray-100 font-bold">
-                      <span>Total Capital</span>
-                      <span className="text-green-700">+{formatCurrency(capitalContributions)}</span>
-                    </div>
-                  </>
-                )}
                 {totalBorrowed > 0 && (
                   <>
-                    <p className="text-xs text-gray-500 font-semibold mt-3">Funds Borrowed (money in)</p>
+                    <p className="text-xs text-gray-500 font-semibold">Funds Borrowed (money in)</p>
                     {Array.from(borrowedBySource.entries()).map(([name, amt]) => (
                       <div key={name} className="flex justify-between pl-4">
                         <span className="text-gray-700">From {name}</span>
@@ -314,7 +260,7 @@ export default async function ReportPage({
             <div className="flex justify-between items-center">
               <div>
                 <p className={`text-sm font-bold uppercase ${netCashFlow >= 0 ? "text-green-700" : "text-red-700"}`}>Net Cash Flow</p>
-                <p className="text-xs text-gray-500 mt-0.5">Operating Income + Capital + Borrowed − Repaid</p>
+                <p className="text-xs text-gray-500 mt-0.5">Operating Income + Borrowed − Repaid</p>
               </div>
               <p className={`text-2xl font-black ${netCashFlow >= 0 ? "text-green-700" : "text-red-700"}`}>
                 {formatCurrency(netCashFlow)}
