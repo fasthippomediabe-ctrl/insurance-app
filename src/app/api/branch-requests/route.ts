@@ -28,45 +28,71 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(requests.map((r) => ({ ...r, branchName: branchMap.get(r.branchId) ?? "" })));
 }
 
-// POST: Create new request (branch staff)
+// POST: Create new request (branch staff / collection supervisor / admin)
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
 
-  if (user.role !== "BRANCH_STAFF" && user.role !== "ADMIN") {
+  if (user.role !== "BRANCH_STAFF" && user.role !== "COLLECTION_SUPERVISOR" && user.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const data = await req.json();
-  const { type, title, description, amount, dueDate, vendor, attachments, branchId } = data;
+  try {
+    const data = await req.json();
+    const { type, title, description, amount, dueDate, vendor, attachments, branchId } = data;
 
-  if (!type || !title || !description || !amount) {
-    return NextResponse.json({ error: "type, title, description, amount required" }, { status: 400 });
+    if (!type || !title || !description || amount === undefined || amount === null || amount === "") {
+      return NextResponse.json({ error: "type, title, description, amount required" }, { status: 400 });
+    }
+    const amt = Number(amount);
+    if (!isFinite(amt) || amt <= 0) {
+      return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+    }
+
+    const branch = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? user.branchId : (branchId || user.branchId);
+    if (!branch) return NextResponse.json({ error: "Branch is required" }, { status: 400 });
+
+    // Generate next requestNo from MAX existing (count is unreliable if any rows were deleted)
+    const last = await db.branchRequest.findFirst({
+      orderBy: { requestNo: "desc" },
+      select: { requestNo: true },
+    });
+    const lastNum = last ? parseInt(last.requestNo.replace(/^BRQ-/, ""), 10) : 0;
+    let nextNum = (isFinite(lastNum) ? lastNum : 0) + 1;
+
+    // Retry on unique-constraint collision (concurrent inserts)
+    let request;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const requestNo = `BRQ-${String(nextNum).padStart(6, "0")}`;
+      try {
+        request = await db.branchRequest.create({
+          data: {
+            requestNo,
+            type,
+            branchId: branch,
+            requestedBy: user.id,
+            title,
+            description,
+            amount: amt,
+            dueDate: dueDate ? new Date(dueDate) : null,
+            vendor: vendor || null,
+            attachments: attachments || null,
+          },
+        });
+        break;
+      } catch (e: any) {
+        if (e?.code === "P2002") { nextNum++; continue; }
+        throw e;
+      }
+    }
+    if (!request) return NextResponse.json({ error: "Could not generate request number" }, { status: 500 });
+
+    return NextResponse.json(request, { status: 201 });
+  } catch (e: any) {
+    console.error("[branch-requests POST]", e);
+    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }
-
-  const branch = (user.role === "BRANCH_STAFF" || user.role === "COLLECTION_SUPERVISOR") ? user.branchId : (branchId || user.branchId);
-  if (!branch) return NextResponse.json({ error: "Branch is required" }, { status: 400 });
-
-  const count = await db.branchRequest.count();
-  const requestNo = `BRQ-${String(count + 1).padStart(6, "0")}`;
-
-  const request = await db.branchRequest.create({
-    data: {
-      requestNo,
-      type,
-      branchId: branch,
-      requestedBy: user.id,
-      title,
-      description,
-      amount,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      vendor: vendor || null,
-      attachments: attachments || null,
-    },
-  });
-
-  return NextResponse.json(request, { status: 201 });
 }
 
 // PATCH: Approve/reject/release OR edit fields

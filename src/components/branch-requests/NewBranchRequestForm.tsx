@@ -47,19 +47,30 @@ export default function NewBranchRequestForm({
     }
     setLoading(true); setError("");
     try {
+      const amt = parseFloat(form.amount);
+      if (!isFinite(amt) || amt <= 0) {
+        setError("Amount must be a positive number."); setLoading(false); return;
+      }
+      if (role === "ADMIN" && !form.branchId) {
+        setError("Please select a branch."); setLoading(false); return;
+      }
       const res = await fetch("/api/branch-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          amount: parseFloat(form.amount),
+          amount: amt,
           attachments: attachment || undefined,
         }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Failed");
+      if (!res.ok) {
+        let msg = `Request failed (${res.status})`;
+        try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       router.push("/branch-requests");
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || "Failed to submit request.");
     } finally {
       setLoading(false);
     }
