@@ -86,6 +86,10 @@ export default async function AccountingPage() {
             className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
             Liabilities
           </Link>
+          <Link href="/accounting/cash-balance"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            Cash Balance
+          </Link>
           <Link href="/accounting/report"
             className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
             P&amp;L Report
