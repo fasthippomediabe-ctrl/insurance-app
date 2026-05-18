@@ -6,13 +6,15 @@ import { EmployeePosition } from "@prisma/client";
 import { POSITION_LABELS } from "@/lib/utils";
 
 // Ordered hierarchy for display (lower index = lower rank)
-const POSITION_ORDER: EmployeePosition[] = ["MO", "AO", "MH", "AM", "BS", "BM", "RM", "TH", "EVP", "CEO", "CHR"];
+const POSITION_ORDER: EmployeePosition[] = ["MO", "AO", "AS", "MH", "AM", "CS", "BS", "BM", "RM", "TH", "EVP", "CEO", "CHR"];
 
 const POSITION_COLORS: Record<string, string> = {
   MO: "bg-blue-100 text-blue-700",
   AO: "bg-teal-100 text-teal-700",
+  AS: "bg-emerald-100 text-emerald-700",
   MH: "bg-purple-100 text-purple-700",
   AM: "bg-indigo-100 text-indigo-700",
+  CS: "bg-cyan-100 text-cyan-700",
   BS: "bg-gray-100 text-gray-600",
   BM: "bg-green-100 text-green-700",
   RM: "bg-orange-100 text-orange-700",
