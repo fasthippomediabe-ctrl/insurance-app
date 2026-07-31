@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true, // self-hosted behind Cloudflare tunnel (not Vercel)
   providers: [], // providers are added in auth.ts (server-only)
   callbacks: {
     async jwt({ token, user }) {
@@ -25,7 +26,9 @@ export const authConfig: NextAuthConfig = {
     },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isAuthPage = nextUrl.pathname.startsWith("/login");
+      const isAuthPage =
+        nextUrl.pathname.startsWith("/login") ||
+        nextUrl.pathname.startsWith("/forgot-password");
       const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
 
       if (isApiAuth) return true;

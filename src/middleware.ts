@@ -16,7 +16,8 @@ export function middleware(req: NextRequest) {
     req.cookies.get("__Secure-next-auth.session-token");
 
   const isLoggedIn = !!sessionToken;
-  const isAuthPage = pathname.startsWith("/login");
+  const isAuthPage =
+    pathname.startsWith("/login") || pathname.startsWith("/forgot-password");
 
   if (!isLoggedIn && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", req.url));

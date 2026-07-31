@@ -16,8 +16,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        const user = await db.user.findUnique({
-          where: { username: credentials.username as string },
+        const user = await db.user.findFirst({
+          where: {
+            username: {
+              equals: (credentials.username as string).trim(),
+              mode: "insensitive",
+            },
+          },
           include: { branch: true },
         });
 

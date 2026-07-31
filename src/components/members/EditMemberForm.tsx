@@ -97,6 +97,8 @@ export default function EditMemberForm({ member, branches, agents, collectors, i
       branchId: form.branchId,
       agentId: form.agentId || null,
       collectorId: form.collectorId || null,
+      enrollmentDate: form.enrollmentDate || null,
+      effectivityDate: form.effectivityDate || null,
       monthlyDue,
       totalPlanAmount: totalPlan,
     };
