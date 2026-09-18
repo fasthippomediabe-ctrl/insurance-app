@@ -138,7 +138,7 @@ export default async function HelpPage() {
       {/* Common Topics */}
       <Section title="Common Topics">
         <Step n="•" title="How to verify a member's balance">
-          Members can check their own account at <span className="font-mono text-xs bg-gray-100 px-1 rounded">triplej.ascendryxdigital.com/verify</span>
+          Members can check their own account at <span className="font-mono text-xs bg-gray-100 px-1 rounded">triplej.ascendryx.net/verify</span>
           using their MAF number and last name. They&apos;ll see payment history, due date, aging, and amount due.
         </Step>
         <Step n="•" title="Plan categories &amp; claimable rules">
