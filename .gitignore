@@ -28,6 +28,13 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+# Timestamped copies of env files, created when rotating credentials.
+# These hold real secrets and this repo is public, so they must never be
+# staged. The .env.local rule above does not match a .bak suffix.
+.env*.bak
+.env*.bak_*
+*.env.bak*
+
 
 # vercel
 .vercel
